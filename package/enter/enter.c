@@ -14,6 +14,8 @@
  *
  * Namespaces are unshared one at a time so partial-namespace kernels
  * (Android, LXC, WSL1, older containers) keep whatever subset works.
+ * Mount namespace is required.
+ * Other namespaces are optional.
  */
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -45,9 +47,13 @@ extern char **environ;
 
 static void sanitize_env(void)
 {
-    char *lang = getenv("LANG");
-    char *term = getenv("TERM");
-    char *tz = getenv("TZ");
+    const char *src_lang = getenv("LANG");
+    const char *src_term = getenv("TERM");
+    const char *src_tz = getenv("TZ");
+
+    char *lang = src_lang ? strdup(src_lang) : NULL;
+    char *term = src_term ? strdup(src_term) : NULL;
+    char *tz = src_tz ? strdup(src_tz) : NULL;
 
     clearenv();
 
@@ -59,6 +65,10 @@ static void sanitize_env(void)
     setenv("TERM", term ? term : "linux", 1);
     if (tz)
         setenv("TZ", tz, 1);
+
+    free(lang);
+    free(term);
+    free(tz);
 }
 
 /* ============================================================ */
@@ -101,11 +111,49 @@ static void ensure_dev(const char *devdir, const char *name,
     (void)mknod(path, S_IFCHR | mode, MAKEDEV(maj, min));
 }
 
-static void fill_vital_devices(const char *devdir)
+static void ensure_ptmx_link(const char *devdir)
 {
-    char pts[4096];
     char ptmx[4096];
 
+    snprintf(ptmx, sizeof(ptmx), "%s/ptmx", devdir);
+
+    if (unlink(ptmx) != 0 && errno != ENOENT)
+    {
+        fprintf(stderr, "enter: unlink %s: %s\n",
+                ptmx, strerror(errno));
+        return;
+    }
+
+    if (symlink("pts/ptmx", ptmx) != 0)
+    {
+        fprintf(stderr, "enter: symlink %s: %s\n",
+                ptmx, strerror(errno));
+    }
+}
+
+static void fill_standard_links(const char *devdir)
+{
+    char path[4096];
+
+    snprintf(path, sizeof(path), "%s/fd", devdir);
+    unlink(path);
+    symlink("/proc/self/fd", path);
+
+    snprintf(path, sizeof(path), "%s/stdin", devdir);
+    unlink(path);
+    symlink("/proc/self/fd/0", path);
+
+    snprintf(path, sizeof(path), "%s/stdout", devdir);
+    unlink(path);
+    symlink("/proc/self/fd/1", path);
+
+    snprintf(path, sizeof(path), "%s/stderr", devdir);
+    unlink(path);
+    symlink("/proc/self/fd/2", path);
+}
+
+static void fill_vital_devices(const char *devdir)
+{
     ensure_dev(devdir, "null", 1, 3, 0666);
     ensure_dev(devdir, "zero", 1, 5, 0666);
     ensure_dev(devdir, "full", 1, 7, 0666);
@@ -114,12 +162,7 @@ static void fill_vital_devices(const char *devdir)
     ensure_dev(devdir, "tty", 5, 0, 0666);
     ensure_dev(devdir, "console", 5, 1, 0600);
 
-    snprintf(pts, sizeof(pts), "%s/pts", devdir);
-    (void)mkdir(pts, 0755);
-
-    snprintf(ptmx, sizeof(ptmx), "%s/ptmx", devdir);
-    unlink(ptmx);
-    symlink("pts/ptmx", ptmx);
+    fill_standard_links(devdir);
 }
 
 /* ============================================================ */
@@ -139,23 +182,24 @@ static int try_mount(const char *src, const char *tgt, const char *fstype,
 static void setup_pseudo_fs(const char *root, int dev_usable)
 {
     char path[4096];
+    char devdir[4096];
 
-    /* /dev — never shadow a working one */
-    snprintf(path, sizeof(path), "%s/dev", root);
-    (void)mkdir(path, 0755);
+    /* /dev — preserve an existing usable tree */
+    snprintf(devdir, sizeof(devdir), "%s/dev", root);
+    (void)mkdir(devdir, 0755);
 
     if (dev_usable)
     {
-        fill_vital_devices(path);
+        fill_vital_devices(devdir);
     }
-    else if (mount("devtmpfs", path, "devtmpfs", MS_NOSUID, NULL) == 0)
+    else if (mount("devtmpfs", devdir, "devtmpfs", MS_NOSUID, NULL) == 0)
     {
         /* kernel-provided, all good */
     }
-    else if (try_mount("tmpfs", path, "tmpfs",
+    else if (try_mount("tmpfs", devdir, "tmpfs",
                        MS_NOSUID, "mode=0755") == 0)
     {
-        fill_vital_devices(path);
+        fill_vital_devices(devdir);
     }
 
     snprintf(path, sizeof(path), "%s/proc", root);
@@ -166,11 +210,14 @@ static void setup_pseudo_fs(const char *root, int dev_usable)
     (void)mkdir(path, 0555);
     try_mount("sysfs", path, "sysfs", MS_NOSUID | MS_NOEXEC | MS_NODEV, NULL);
 
-    /* devpts creates char devices → do NOT add MS_NODEV here */
+    /* Give the rootfs a private devpts instance. */
     snprintf(path, sizeof(path), "%s/dev/pts", root);
     (void)mkdir(path, 0755);
-    try_mount("devpts", path, "devpts", MS_NOSUID | MS_NOEXEC,
-              "mode=0620,ptmxmode=0666,newinstance");
+    if (try_mount("devpts", path, "devpts", MS_NOSUID | MS_NOEXEC,
+                  "mode=0620,ptmxmode=0666,newinstance") == 0)
+    {
+        ensure_ptmx_link(devdir);
+    }
 
     snprintf(path, sizeof(path), "%s/dev/shm", root);
     (void)mkdir(path, 1777);
@@ -189,7 +236,7 @@ static void setup_pseudo_fs(const char *root, int dev_usable)
 /* pivot_root                                                    */
 /* ============================================================ */
 
-static int do_pivot_root(const char *root)
+static int do_pivot_root(void)
 {
     static const char oldroot[] = ".enter-oldroot";
 
@@ -217,11 +264,12 @@ static int do_pivot_root(const char *root)
 static int do_switch_root(const char *root)
 {
     /*
-     * Replace the namespace's rootfs mount with our rootfs mount.
+     * Move our self-bind mount to /.
      *
-     * Unlike pivot_root(), MS_MOVE works when the current root
-     * is the initial rootfs mount.
+     * This is useful as a fallback when pivot_root() cannot
+     * operate on the current root setup.
      */
+
     if (mount(root, "/", NULL, MS_MOVE, NULL) != 0)
     {
         fprintf(stderr, "enter: move root: %s\n",
@@ -264,6 +312,14 @@ enum
 
 static int enter_rootfs(const char *root, int dev_usable)
 {
+    if (do_pivot_root() == 0)
+    {
+        setup_pseudo_fs("", dev_usable);
+        return MODE_PIVOT;
+    }
+
+    fprintf(stderr, "enter: pivot_root failed, trying switch_root\n");
+
     if (do_switch_root(root) == 0)
     {
         setup_pseudo_fs("", dev_usable);
@@ -385,7 +441,7 @@ int main(int argc, char *argv[])
     pid_t pid;
     int status;
 
-    /* 1. find our own directory = candidate rootfs */
+    /* find our own directory = candidate rootfs */
     if (get_self_dir(rootfs, sizeof(rootfs), argv[0]) != 0)
     {
         fprintf(stderr, "enter: cannot determine own directory\n");
@@ -399,7 +455,7 @@ int main(int argc, char *argv[])
     }
     snprintf(rootfs, sizeof(rootfs), "%s", resolved);
 
-    /* 2. sanity check: it must look like a real rootfs */
+    /* sanity check: it must look like a real rootfs */
     snprintf(usrpath, sizeof(usrpath), "%s/usr", rootfs);
     if (stat(usrpath, &st) != 0 || !S_ISDIR(st.st_mode))
     {
@@ -414,7 +470,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /* 3. determine program to run */
+    /* determine program to run */
     if (argc >= 2)
     {
         prog = argv[1];
@@ -441,17 +497,14 @@ int main(int argc, char *argv[])
         child_argv = auto_argv;
     }
 
-    /* 4. pre-flight /dev probe */
+    /* pre-flight /dev probe */
     snprintf(devpath, sizeof(devpath), "%s/dev", rootfs);
     dev_usable = is_usable_dev(devpath);
 
-    /* 5. sanitise env */
-    sanitize_env();
-
-    /* 6. unshare PID */
+    /* unshare PID */
     try_ns(CLONE_NEWPID, "pid"); /* fork below activates it */
 
-    /* 7. fork: with CLONE_NEWPID the child becomes PID 1 */
+    /* fork: with CLONE_NEWPID the child becomes PID 1 */
     pid = fork();
     if (pid < 0)
     {
@@ -459,6 +512,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Child
     if (pid == 0)
     {
         if (!try_ns(CLONE_NEWNS, "mount"))
@@ -491,7 +545,6 @@ int main(int argc, char *argv[])
         // try_ns(CLONE_NEWNET, "net");
 
         int mode = enter_rootfs(rootfs, dev_usable);
-        char final_prog[4096];
 
         if (mode == MODE_FAIL)
         {
@@ -499,7 +552,8 @@ int main(int argc, char *argv[])
             _exit(126);
         }
 
-        snprintf(final_prog, sizeof(final_prog), "%s", prog);
+        /* sanitise env */
+        sanitize_env();
 
         if (strchr(prog, '/'))
             execve(prog, child_argv, environ);
@@ -507,12 +561,19 @@ int main(int argc, char *argv[])
             execvp(prog, child_argv);
 
         fprintf(stderr, "enter: execve %s: %s\n",
-                final_prog, strerror(errno));
+                prog, strerror(errno));
         _exit(127);
     }
 
-    if (waitpid(pid, &status, 0) < 0)
+    // Parent
+    for (;;)
     {
+        if (waitpid(pid, &status, 0) >= 0)
+            break;
+
+        if (errno == EINTR)
+            continue;
+
         perror("waitpid");
         return 1;
     }
