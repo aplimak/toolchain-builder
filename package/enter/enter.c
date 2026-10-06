@@ -448,35 +448,7 @@ int main(int argc, char *argv[])
     /* 5. sanitise env */
     sanitize_env();
 
-    /* 6. unshare namespaces one at a time */
-    if (!try_ns(CLONE_NEWNS, "mount"))
-    {
-        return 1;
-    }
-
-    if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0)
-    {
-        fprintf(stderr,
-                "enter: make / private failed: %s\n",
-                strerror(errno));
-        return 1;
-    }
-
-    if (mount(".", ".", NULL, MS_BIND, NULL) != 0)
-    {
-        fprintf(stderr, "enter: bind self: %s\n",
-                strerror(errno));
-        return -1;
-    }
-
-    if (try_ns(CLONE_NEWUTS, "uts"))
-    {
-        if (sethostname(DEF_HOSTNAME, strlen(DEF_HOSTNAME)) != 0)
-            perror("sethostname");
-    }
-
-    try_ns(CLONE_NEWIPC, "ipc");
-    // try_ns(CLONE_NEWNET, "net");
+    /* 6. unshare PID */
     try_ns(CLONE_NEWPID, "pid"); /* fork below activates it */
 
     /* 7. fork: with CLONE_NEWPID the child becomes PID 1 */
@@ -489,6 +461,35 @@ int main(int argc, char *argv[])
 
     if (pid == 0)
     {
+        if (!try_ns(CLONE_NEWNS, "mount"))
+        {
+            _exit(1);
+        }
+
+        if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0)
+        {
+            fprintf(stderr,
+                    "enter: make / private failed: %s\n",
+                    strerror(errno));
+            _exit(1);
+        }
+
+        if (mount(".", ".", NULL, MS_BIND, NULL) != 0)
+        {
+            fprintf(stderr, "enter: bind self: %s\n",
+                    strerror(errno));
+            _exit(1);
+        }
+
+        if (try_ns(CLONE_NEWUTS, "uts"))
+        {
+            if (sethostname(DEF_HOSTNAME, strlen(DEF_HOSTNAME)) != 0)
+                perror("sethostname");
+        }
+
+        try_ns(CLONE_NEWIPC, "ipc");
+        // try_ns(CLONE_NEWNET, "net");
+
         int mode = enter_rootfs(rootfs, dev_usable);
         char final_prog[4096];
 
