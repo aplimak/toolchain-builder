@@ -1,0 +1,4 @@
+config BR2_PACKAGE_GHOSTTY_TERMINFO
+    bool "ghostty-terminfo"
+    help
+      Installs the xterm-ghostty terminfo entry for the Ghostty terminal emulator.

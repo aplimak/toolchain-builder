@@ -1,0 +1,2 @@
+source "$BR2_EXTERNAL_AELIUX_EXTERNAL_PATH/package/ghostty-terminfo/Config.in"
+source "$BR2_EXTERNAL_AELIUX_EXTERNAL_PATH/package/enter/Config.in"
