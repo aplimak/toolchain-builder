@@ -12,11 +12,6 @@
  * and falls back to a shell:
  *   /bin/sh /bin/ash /bin/bash /usr/bin/sh
  *
- * Isolation is attempted in this order, degrading gracefully:
- *   1. mount+pid+uts+ipc+net namespaces + pivot_root
- *   2. chroot with whatever namespaces were available
- *   3. chdir only (no filesystem isolation)
- *
  * Namespaces are unshared one at a time so partial-namespace kernels
  * (Android, LXC, WSL1, older containers) keep whatever subset works.
  */
@@ -109,6 +104,7 @@ static void ensure_dev(const char *devdir, const char *name,
 static void fill_vital_devices(const char *devdir)
 {
     char pts[4096];
+    char ptmx[4096];
 
     ensure_dev(devdir, "null", 1, 3, 0666);
     ensure_dev(devdir, "zero", 1, 5, 0666);
@@ -117,10 +113,13 @@ static void fill_vital_devices(const char *devdir)
     ensure_dev(devdir, "urandom", 1, 9, 0666);
     ensure_dev(devdir, "tty", 5, 0, 0666);
     ensure_dev(devdir, "console", 5, 1, 0600);
-    ensure_dev(devdir, "ptmx", 5, 2, 0666);
 
     snprintf(pts, sizeof(pts), "%s/pts", devdir);
     (void)mkdir(pts, 0755);
+
+    snprintf(ptmx, sizeof(ptmx), "%s/ptmx", devdir);
+    unlink(ptmx);
+    symlink("pts/ptmx", ptmx);
 }
 
 /* ============================================================ */
@@ -194,24 +193,15 @@ static int do_pivot_root(const char *root)
 {
     static const char oldroot[] = ".enter-oldroot";
 
-    chdir(root);
     if (mkdir(oldroot, 0700) != 0 && errno != EEXIST)
     {
         perror("mkdir oldroot");
         return -1;
     }
 
-    if (mount(".", ".", NULL, MS_BIND | MS_REC, NULL) != 0)
-    {
-        perror("bind root");
-        (void)rmdir(oldroot);
-        return -1;
-    }
-
     if (syscall(SYS_pivot_root, ".", oldroot) != 0)
     {
         perror("pivot_root");
-        (void)umount2(root, MNT_DETACH);
         (void)rmdir(oldroot);
         return -1;
     }
@@ -226,24 +216,6 @@ static int do_pivot_root(const char *root)
 
 static int do_switch_root(const char *root)
 {
-    /*
-     * We need root to be a mount.
-     * Convert the directory into one with a self-bind.
-     */
-    if (chdir(root) != 0)
-    {
-        fprintf(stderr, "enter: chdir(%s): %s\n",
-                root, strerror(errno));
-        return -1;
-    }
-
-    if (mount(".", ".", NULL, MS_BIND, NULL) != 0)
-    {
-        fprintf(stderr, "enter: bind root: %s\n",
-                strerror(errno));
-        return -1;
-    }
-
     /*
      * Replace the namespace's rootfs mount with our rootfs mount.
      *
@@ -301,7 +273,7 @@ static int enter_rootfs(const char *root, int dev_usable)
     fprintf(stderr, "enter: switch_root failed (%s)\n",
             strerror(errno));
 
-    if (chroot(root) == 0 && chdir("/") == 0)
+    if (chroot(".") == 0 && chdir("/") == 0)
     {
         setup_pseudo_fs("", dev_usable);
         return MODE_CHROOT;
@@ -435,6 +407,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    if (chdir(rootfs) != 0)
+    {
+        fprintf(stderr, "enter: chdir(%s): %s\n",
+                rootfs, strerror(errno));
+        return -1;
+    }
+
     /* 3. determine program to run */
     if (argc >= 2)
     {
@@ -465,8 +444,6 @@ int main(int argc, char *argv[])
     /* 4. pre-flight /dev probe */
     snprintf(devpath, sizeof(devpath), "%s/dev", rootfs);
     dev_usable = is_usable_dev(devpath);
-    fprintf(stderr, "enter: rootfs=%s dev_usable=%d prog=%s\n",
-            rootfs, dev_usable, prog);
 
     /* 5. sanitise env */
     sanitize_env();
@@ -483,6 +460,13 @@ int main(int argc, char *argv[])
                 "enter: make / private failed: %s\n",
                 strerror(errno));
         return 1;
+    }
+
+    if (mount(".", ".", NULL, MS_BIND, NULL) != 0)
+    {
+        fprintf(stderr, "enter: bind self: %s\n",
+                strerror(errno));
+        return -1;
     }
 
     if (try_ns(CLONE_NEWUTS, "uts"))
@@ -516,7 +500,11 @@ int main(int argc, char *argv[])
 
         snprintf(final_prog, sizeof(final_prog), "%s", prog);
 
-        execve(final_prog, child_argv, environ);
+        if (strchr(prog, '/'))
+            execve(prog, child_argv, environ);
+        else
+            execvp(prog, child_argv);
+
         fprintf(stderr, "enter: execve %s: %s\n",
                 final_prog, strerror(errno));
         _exit(127);
