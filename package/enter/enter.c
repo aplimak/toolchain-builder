@@ -192,36 +192,89 @@ static void setup_pseudo_fs(const char *root, int dev_usable)
 
 static int do_pivot_root(const char *root)
 {
-    static const char put_old_rel[] = "/.enter-oldroot";
-    char put_old[4096];
-    int n;
+    static const char oldroot[] = ".enter-oldroot";
 
-    n = snprintf(put_old, sizeof(put_old), "%s%s", root, put_old_rel);
-    if (n < 0 || (size_t)n >= sizeof(put_old))
-        return -1;
-
-    (void)rmdir(put_old);
-    if (mkdir(put_old, 0700) != 0)
-        return -1;
-
-    if (mount(root, root, NULL, MS_BIND | MS_REC, NULL) != 0)
+    chdir(root);
+    if (mkdir(oldroot, 0700) != 0 && errno != EEXIST)
     {
-        (void)rmdir(put_old);
+        perror("mkdir oldroot");
         return -1;
     }
 
-    if (syscall(SYS_pivot_root, root, put_old) != 0)
+    if (mount(".", ".", NULL, MS_BIND | MS_REC, NULL) != 0)
     {
+        perror("bind root");
+        (void)rmdir(oldroot);
+        return -1;
+    }
+
+    if (syscall(SYS_pivot_root, ".", oldroot) != 0)
+    {
+        perror("pivot_root");
         (void)umount2(root, MNT_DETACH);
-        (void)rmdir(put_old);
+        (void)rmdir(oldroot);
         return -1;
     }
 
     if (chdir("/") != 0)
         return -1;
 
-    (void)umount2(put_old_rel, MNT_DETACH);
-    (void)rmdir(put_old_rel);
+    (void)umount2(oldroot, MNT_DETACH);
+    (void)rmdir(oldroot);
+    return 0;
+}
+
+static int do_switch_root(const char *root)
+{
+    /*
+     * We need root to be a mount.
+     * Convert the directory into one with a self-bind.
+     */
+    if (chdir(root) != 0)
+    {
+        fprintf(stderr, "enter: chdir(%s): %s\n",
+                root, strerror(errno));
+        return -1;
+    }
+
+    if (mount(".", ".", NULL, MS_BIND, NULL) != 0)
+    {
+        fprintf(stderr, "enter: bind root: %s\n",
+                strerror(errno));
+        return -1;
+    }
+
+    /*
+     * Replace the namespace's rootfs mount with our rootfs mount.
+     *
+     * Unlike pivot_root(), MS_MOVE works when the current root
+     * is the initial rootfs mount.
+     */
+    if (mount(root, "/", NULL, MS_MOVE, NULL) != 0)
+    {
+        fprintf(stderr, "enter: move root: %s\n",
+                strerror(errno));
+        return -1;
+    }
+
+    /*
+     * The process still has the old root directory semantics,
+     * so explicitly change its root.
+     */
+    if (chroot(".") != 0)
+    {
+        fprintf(stderr, "enter: chroot new root: %s\n",
+                strerror(errno));
+        return -1;
+    }
+
+    if (chdir("/") != 0)
+    {
+        fprintf(stderr, "enter: chdir /: %s\n",
+                strerror(errno));
+        return -1;
+    }
+
     return 0;
 }
 
@@ -233,17 +286,19 @@ enum
 {
     MODE_FAIL = 0,
     MODE_PIVOT,
+    MODE_SHROOT,
     MODE_CHROOT
 };
 
 static int enter_rootfs(const char *root, int dev_usable)
 {
-    setup_pseudo_fs(root, dev_usable);
+    if (do_switch_root(root) == 0)
+    {
+        setup_pseudo_fs("", dev_usable);
+        return MODE_SHROOT;
+    }
 
-    if (do_pivot_root(root) == 0)
-        return MODE_PIVOT;
-
-    fprintf(stderr, "enter: pivot_root failed (%s), trying chroot\n",
+    fprintf(stderr, "enter: switch_root failed (%s)\n",
             strerror(errno));
 
     if (chroot(root) == 0 && chdir("/") == 0)
@@ -341,6 +396,8 @@ static const char *find_in_rootfs(const char *root,
 /* main                                                          */
 /* ============================================================ */
 
+#define DEF_HOSTNAME "buildroot"
+
 int main(int argc, char *argv[])
 {
     char rootfs[4096];
@@ -353,7 +410,6 @@ int main(int argc, char *argv[])
     const char *prog;
     struct stat st;
     int dev_usable;
-    int have_mnt_ns;
     pid_t pid;
     int status;
 
@@ -416,12 +472,27 @@ int main(int argc, char *argv[])
     sanitize_env();
 
     /* 6. unshare namespaces one at a time */
-    have_mnt_ns = try_ns(CLONE_NEWNS, "mount");
-    if (have_mnt_ns)
-        (void)mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL);
-    try_ns(CLONE_NEWUTS, "uts");
+    if (!try_ns(CLONE_NEWNS, "mount"))
+    {
+        return 1;
+    }
+
+    if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0)
+    {
+        fprintf(stderr,
+                "enter: make / private failed: %s\n",
+                strerror(errno));
+        return 1;
+    }
+
+    if (try_ns(CLONE_NEWUTS, "uts"))
+    {
+        if (sethostname(DEF_HOSTNAME, strlen(DEF_HOSTNAME)) != 0)
+            perror("sethostname");
+    }
+
     try_ns(CLONE_NEWIPC, "ipc");
-    try_ns(CLONE_NEWNET, "net");
+    // try_ns(CLONE_NEWNET, "net");
     try_ns(CLONE_NEWPID, "pid"); /* fork below activates it */
 
     /* 7. fork: with CLONE_NEWPID the child becomes PID 1 */
