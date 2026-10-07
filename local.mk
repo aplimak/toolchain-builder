@@ -1,0 +1,1 @@
+HOST_READLINE_MAKE_OPTS += SHLIB_LIBS="-L$(HOST_DIR)/lib -lncursesw"
