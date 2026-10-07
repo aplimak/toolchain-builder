@@ -6,11 +6,11 @@ THIS_EXTERNAL_PATH := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 # Put downloads in this directory instead of in the Buildroot directory
 ifeq ($(BR2_DL_DIR),)
-BR2_DL_DIR = $(THIS_EXTERNAL_PATH)/dl
+BR2_DL_DIR = $$(BR2_EXTERNAL_AELIUX_EXTERNAL_PATH)/dl
 endif
 
 ifeq ($(BR2_GLOBAL_PATCH_DIR),)
-BR2_GLOBAL_PATCH_DIR = $(THIS_EXTERNAL_PATH)/patches
+BR2_GLOBAL_PATCH_DIR = $$(BR2_EXTERNAL_AELIUX_EXTERNAL_PATH)/patches
 endif
 
 OUTPUT_BASEDIR = $(THIS_EXTERNAL_PATH)/output
