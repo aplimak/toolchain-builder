@@ -1,11 +1,11 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Buildroot 2026.08 Configuration
+# Buildroot 2026.08-700-g846bdb2222 Configuration
 #
 BR2_HAVE_DOT_CONFIG=y
 BR2_EXTERNAL_NAMES="AELIUX_EXTERNAL"
-BR2_EXTERNAL_AELIUX_EXTERNAL_PATH="/home/aeliux/toolchains/buildroot/externnal"
-BR2_EXTERNAL_AELIUX_EXTERNAL_VERSION="-g6638d12"
+BR2_EXTERNAL_AELIUX_EXTERNAL_PATH="/home/aeliux/toolchains/buildroot/external"
+BR2_EXTERNAL_AELIUX_EXTERNAL_VERSION="-ga00fe4c-dirty"
 BR2_HOST_GCC_AT_LEAST_4_9=y
 BR2_HOST_GCC_AT_LEAST_5=y
 BR2_HOST_GCC_AT_LEAST_6=y
@@ -191,11 +191,12 @@ BR2_TOOLCHAIN_BUILDROOT_LIBC="musl"
 # BR2_KERNEL_HEADERS_6_6 is not set
 # BR2_KERNEL_HEADERS_6_12 is not set
 # BR2_KERNEL_HEADERS_6_18 is not set
-# BR2_KERNEL_HEADERS_7_1 is not set
+# BR2_KERNEL_HEADERS_7_2 is not set
 BR2_KERNEL_HEADERS_VERSION=y
 # BR2_KERNEL_HEADERS_CUSTOM_TARBALL is not set
 # BR2_KERNEL_HEADERS_CUSTOM_GIT is not set
 BR2_DEFAULT_KERNEL_VERSION="3.4.113"
+# BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_7_2 is not set
 # BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_7_1 is not set
 # BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_7_0 is not set
 # BR2_PACKAGE_HOST_LINUX_HEADERS_CUSTOM_6_19 is not set
@@ -295,9 +296,9 @@ BR2_PACKAGE_GLIBC_SUPPORTS=y
 # Binutils Options
 #
 BR2_PACKAGE_HOST_BINUTILS_SUPPORTS_CFI=y
-# BR2_BINUTILS_VERSION_2_44_X is not set
 # BR2_BINUTILS_VERSION_2_45_X is not set
 BR2_BINUTILS_VERSION_2_46_X=y
+# BR2_BINUTILS_VERSION_2_47_X is not set
 BR2_BINUTILS_VERSION="2.46.1"
 # BR2_BINUTILS_GPROFNG is not set
 BR2_BINUTILS_EXTRA_CONFIG_OPTIONS=""
@@ -414,7 +415,7 @@ BR2_LZCAT="lzip -d -c"
 BR2_ZSTDCAT="zstdcat"
 BR2_TAR_OPTIONS=""
 BR2_DEFCONFIG="$(CONFIG_DIR)/defconfig"
-BR2_DL_DIR="/mnt/files/resources/mirrors/sources/buildroot"
+BR2_DL_DIR=/home/aeliux/toolchains/buildroot/external/dl
 BR2_HOST_DIR="$(BASE_DIR)/host"
 
 #
@@ -743,6 +744,7 @@ BR2_PACKAGE_GOOGLE_BREAKPAD_ARCH_SUPPORTS=y
 #
 # google-breakpad requires a glibc toolchain w/ wchar, threads, C++, gcc >= 7
 #
+# BR2_PACKAGE_HEAPTRACK is not set
 # BR2_PACKAGE_HYPERFINE is not set
 # BR2_PACKAGE_IOZONE is not set
 BR2_PACKAGE_KEXEC_ARCH_SUPPORTS=y
@@ -822,7 +824,7 @@ BR2_PACKAGE_PTM2HUMAN_ARCH_SUPPORTS=y
 # BR2_PACKAGE_STRESS_NG is not set
 
 #
-# sysprof needs a toolchain w/ dynamic library, wchar, threads, C++, gcc >= 7, headers >= 5.12
+# sysprof needs a toolchain w/ dynamic library, wchar, threads, C++, gcc >= 7, headers >= 5.12, ucontext
 #
 
 #
@@ -1121,6 +1123,7 @@ BR2_PACKAGE_NETSURF_ARCH_SUPPORTS=y
 #
 # ogre needs X11 and an OpenGL provider
 #
+# BR2_PACKAGE_PLUTOVG is not set
 # BR2_PACKAGE_PSPLASH is not set
 # BR2_PACKAGE_SDL is not set
 # BR2_PACKAGE_SDL2 is not set
@@ -1727,7 +1730,6 @@ BR2_PACKAGE_PYTHON3_PY_PYC=y
 #
 # The following modules are unusual or require extra libraries
 #
-# BR2_PACKAGE_PYTHON3_2TO3 is not set
 # BR2_PACKAGE_PYTHON3_BERKELEYDB is not set
 BR2_PACKAGE_PYTHON3_BZIP2=y
 # BR2_PACKAGE_PYTHON3_CODECSCJK is not set
@@ -1950,7 +1952,7 @@ BR2_PACKAGE_PYTHON_GRPCIO_ARCH_SUPPORTS=y
 # BR2_PACKAGE_PYTHON_H2 is not set
 
 #
-# python-hid needs udev /dev management and a toolchain w/ NPTL, gcc >= 4.9
+# python-hid needs udev /dev management and a toolchain w/ NPTL, gcc >= 4.9, wchar
 #
 # BR2_PACKAGE_PYTHON_HIREDIS is not set
 # BR2_PACKAGE_PYTHON_HKDF is not set
@@ -2230,6 +2232,7 @@ BR2_PACKAGE_PYTHON_NUMPY_ARCH_SUPPORTS=y
 # BR2_PACKAGE_PYTHON_SENTRY_SDK is not set
 # BR2_PACKAGE_PYTHON_SERIAL is not set
 # BR2_PACKAGE_PYTHON_SERIAL_ASYNCIO is not set
+# BR2_PACKAGE_PYTHON_SERVESTATIC is not set
 # BR2_PACKAGE_PYTHON_SERVICE_IDENTITY is not set
 # BR2_PACKAGE_PYTHON_SETPROCTITLE is not set
 # BR2_PACKAGE_PYTHON_SETUPTOOLS is not set
@@ -2775,7 +2778,7 @@ BR2_PACKAGE_GNU_EFI_ARCH_SUPPORTS=y
 # BR2_PACKAGE_HACKRF is not set
 
 #
-# hidapi needs udev /dev management and a toolchain w/ NPTL, gcc >= 4.9
+# hidapi needs udev /dev management and a toolchain w/ NPTL, gcc >= 4.9, wchar
 #
 BR2_PACKAGE_JITTERENTROPY_LIBRARY=y
 # BR2_PACKAGE_LCDAPI is not set
@@ -2873,6 +2876,7 @@ BR2_PACKAGE_JSON_C=y
 # BR2_PACKAGE_JSON_FOR_MODERN_CPP is not set
 # BR2_PACKAGE_JSON_GLIB is not set
 # BR2_PACKAGE_JSONCPP is not set
+# BR2_PACKAGE_JWT_CPP is not set
 # BR2_PACKAGE_LIBFASTJSON is not set
 BR2_PACKAGE_LIBJSON=y
 # BR2_PACKAGE_LIBROXML is not set
@@ -2935,7 +2939,7 @@ BR2_PACKAGE_LIBCAMERA_ARCH_SUPPORTS=y
 #
 
 #
-# libcamera-apps needs a toolchain w/ C++, threads, wchar, dynamic library, gcc >= 8, headers >= 5.5
+# libcamera-apps needs a toolchain w/ C++, threads, wchar, dynamic library, gcc >= 10, headers >= 5.5
 #
 # BR2_PACKAGE_LIBDE265 is not set
 # BR2_PACKAGE_LIBDVBCSA is not set
@@ -3006,7 +3010,6 @@ BR2_PACKAGE_C_ARES=y
 # BR2_PACKAGE_LIBCGICC is not set
 # BR2_PACKAGE_LIBCOAP is not set
 # BR2_PACKAGE_LIBCPPCONNMAN is not set
-# BR2_PACKAGE_LIBCPPRESTSDK is not set
 BR2_PACKAGE_LIBCURL=y
 # BR2_PACKAGE_LIBCURL_CURL is not set
 # BR2_PACKAGE_LIBCURL_VERBOSE is not set
@@ -3343,11 +3346,6 @@ BR2_PACKAGE_RUY_ARCH_SUPPORTS=y
 # BR2_PACKAGE_SHAPELIB is not set
 # BR2_PACKAGE_SKALIBS is not set
 # BR2_PACKAGE_TBB is not set
-BR2_PACKAGE_TENSORFLOW_LITE_ARCH_SUPPORTS=y
-
-#
-# tensorflow-lite needs a toolchain w/ gcc >= 8, C++, threads
-#
 # BR2_PACKAGE_TINYCBOR is not set
 # BR2_PACKAGE_TL_EXPECTED is not set
 # BR2_PACKAGE_TLLIST is not set
@@ -3418,7 +3416,6 @@ BR2_PACKAGE_READLINE=y
 # BR2_PACKAGE_DOVECOT is not set
 # BR2_PACKAGE_EXIM is not set
 # BR2_PACKAGE_FETCHMAIL is not set
-# BR2_PACKAGE_HEIRLOOM_MAILX is not set
 # BR2_PACKAGE_LIBESMTP is not set
 # BR2_PACKAGE_MSMTP is not set
 # BR2_PACKAGE_MUTT is not set
@@ -3490,10 +3487,6 @@ BR2_PACKAGE_Z3_ARCH_SUPPORTS=y
 # BR2_PACKAGE_BATCTL is not set
 # BR2_PACKAGE_BCUSDK is not set
 # BR2_PACKAGE_BIND is not set
-
-#
-# bind needs a toolchain w/ NPTL, dynamic library, C++, gcc >= 4.9
-#
 # BR2_PACKAGE_BIRD is not set
 # BR2_PACKAGE_BLUEZ5_UTILS is not set
 # BR2_PACKAGE_BMON is not set
@@ -3686,6 +3679,7 @@ BR2_PACKAGE_NETCAT=y
 # BR2_PACKAGE_NETHOGS is not set
 # BR2_PACKAGE_NETPLUG is not set
 # BR2_PACKAGE_NETSNMP is not set
+# BR2_PACKAGE_NETTEST is not set
 
 #
 # NetworkManager needs udev /dev management and a glibc or musl toolchain w/ headers >= 5.4, dynamic library, wchar, threads, gcc >= 4.9
@@ -3731,7 +3725,7 @@ BR2_PACKAGE_OPENSSH_SANDBOX=y
 # BR2_PACKAGE_PARPROUTED is not set
 
 #
-# passt needs a toolchain w/ headers >= 5.9
+# passt needs a glibc or musl toolchain w/ headers >= 5.9
 #
 
 #
@@ -4022,6 +4016,7 @@ BR2_PACKAGE_XXHASH=y
 BR2_PACKAGE_AUDIT_ARCH_SUPPORTS=y
 # BR2_PACKAGE_AUDIT is not set
 # BR2_PACKAGE_BALENA_ENGINE is not set
+# BR2_PACKAGE_BTOP is not set
 # BR2_PACKAGE_BUBBLEWRAP is not set
 # BR2_PACKAGE_CGROUPFS_MOUNT is not set
 # BR2_PACKAGE_CGROUPFS_V2_MOUNT is not set
@@ -4112,7 +4107,7 @@ BR2_PACKAGE_MAKEDUMPFILE_ARCH_SUPPORTS=y
 BR2_PACKAGE_NCDU=y
 
 #
-# ndctl needs udev /dev management, a toolchain headers >= 5.10
+# ndctl needs udev /dev management, a toolchain w/ threads, headers >= 5.10, dynamic library
 #
 # BR2_PACKAGE_NERDCTL is not set
 
@@ -4392,9 +4387,9 @@ BR2_PACKAGE_HOST_FLUTTER_SDK_BIN_ARCH_SUPPORTS=y
 # BR2_PACKAGE_HOST_GENPART is not set
 # BR2_PACKAGE_HOST_GNUPG is not set
 # BR2_PACKAGE_HOST_GNUPG2 is not set
+BR2_PACKAGE_HOST_GO_HOST_ARCH_SUPPORTS=y
 BR2_PACKAGE_HOST_GO_TARGET_ARCH_SUPPORTS=y
 BR2_PACKAGE_HOST_GO_TARGET_CGO_LINKING_SUPPORTS=y
-BR2_PACKAGE_HOST_GO_HOST_ARCH_SUPPORTS=y
 BR2_PACKAGE_HOST_GO_HOST_CGO_LINKING_SUPPORTS=y
 # BR2_PACKAGE_HOST_GO is not set
 BR2_PACKAGE_PROVIDES_HOST_GO="host-go-bin"
@@ -4478,6 +4473,7 @@ BR2_PACKAGE_HOST_QEMU_LINUX_USER_MODE=y
 BR2_PACKAGE_HOST_RUSTC_ARCH_SUPPORTS=y
 BR2_PACKAGE_HOST_RUSTC_TARGET_TIER2_PLATFORMS=y
 BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS=y
+BR2_PACKAGE_HOST_RUSTC_TARGET_HAS_ATOMIC_U64=y
 BR2_PACKAGE_HOST_RUSTC_ARCH="armv7"
 BR2_PACKAGE_HOST_RUSTC_ABI="eabihf"
 # BR2_PACKAGE_HOST_RUSTC is not set
@@ -4513,6 +4509,22 @@ BR2_PACKAGE_HOST_TI_CGT_PRU_ARCH_SUPPORTS=y
 #
 # Legacy config options
 #
+
+#
+# Legacy options removed in 2026.11
+#
+# BR2_PACKAGE_PYTHON3_2TO3 is not set
+# BR2_PACKAGE_LIBCPPRESTSDK is not set
+# BR2_PACKAGE_HEIRLOOM_MAILX is not set
+# BR2_PACKAGE_NXP_BT_WIFI_FIRMWARE_8801 is not set
+# BR2_PACKAGE_NXP_BT_WIFI_FIRMWARE_8997 is not set
+# BR2_PACKAGE_NXP_BT_WIFI_FIRMWARE_8997_SD is not set
+# BR2_PACKAGE_NXP_BT_WIFI_FIRMWARE_8997_PCIE is not set
+# BR2_PACKAGE_NXP_BT_WIFI_FIRMWARE_IW610 is not set
+# BR2_BINUTILS_VERSION_2_44_X is not set
+# BR2_KERNEL_HEADERS_7_1 is not set
+# BR2_PACKAGE_WESTON_SCREENSHARE is not set
+# BR2_PACKAGE_WESTON_SHELL_FULLSCREEN is not set
 
 #
 # Legacy options removed in 2026.08
@@ -5621,7 +5633,7 @@ BR2_TARGET_UBOOT_CUSTOM_PATCH_DIR=""
 #
 
 #
-# External tree for custom packages (in /home/aeliux/toolchains/buildroot/externnal)
+# External tree for custom packages (in /home/aeliux/toolchains/buildroot/external)
 #
 BR2_PACKAGE_GHOSTTY_TERMINFO=y
 BR2_PACKAGE_ENTER=y
