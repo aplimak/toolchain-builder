@@ -16,4 +16,4 @@ MAKE_BUILDROOT = $(MAKE) -C $(THIS_EXTERNAL_PATH)/buildroot BR2_EXTERNAL=$(THIS_
 
 %: $(THIS_EXTERNAL_PATH)/configs/%
 	$(MAKE_BUILDROOT) O=$(OUTPUT_DIR) $@
-	sed -i /^BR2_DL_DIR=.*/s%%BR2_DL_DIR=$(BR2_DL_DIR)% $(OUTPUT_DIR)/.config
+	sed -i 's%^BR2_DL_DIR=.*%BR2_DL_DIR=$(BR2_DL_DIR)%' $(OUTPUT_DIR)/.config
