@@ -349,7 +349,6 @@ static int try_ns(int flag, const char *name)
 {
     if (unshare(flag) == 0)
     {
-        fprintf(stderr, "enter: namespace %s ok\n", name);
         return 1;
     }
     fprintf(stderr, "enter: namespace %s unavailable: %s\n",
