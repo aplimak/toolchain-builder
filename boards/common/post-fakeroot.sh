@@ -16,4 +16,5 @@ EOF
 if [ -e etc/dropbear ] && [ ! -d etc/dropbear ]; then
     rm -f etc/dropbear
     mkdir etc/dropbear
+    chmod 700 etc/dropbear
 fi
