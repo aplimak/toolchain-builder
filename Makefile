@@ -4,15 +4,6 @@ MAKEFLAGS += --no-builtin-rules
 
 THIS_EXTERNAL_PATH := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
-# Put downloads in this directory instead of in the Buildroot directory
-ifeq ($(BR2_DL_DIR),)
-BR2_DL_DIR = $$(BR2_EXTERNAL_AELIUX_EXTERNAL_PATH)/dl
-endif
-
-ifeq ($(BR2_GLOBAL_PATCH_DIR),)
-BR2_GLOBAL_PATCH_DIR = $$(BR2_EXTERNAL_AELIUX_EXTERNAL_PATH)/patches
-endif
-
 OUTPUT_BASEDIR = $(THIS_EXTERNAL_PATH)/output
 OUTPUT_DIR = $(OUTPUT_BASEDIR)/$(patsubst %_defconfig,%,$@)
 
@@ -20,5 +11,3 @@ MAKE_BUILDROOT = $(MAKE) -C $(THIS_EXTERNAL_PATH)/buildroot BR2_EXTERNAL=$(THIS_
 
 %: $(THIS_EXTERNAL_PATH)/configs/%
 	$(MAKE_BUILDROOT) O=$(OUTPUT_DIR) $@
-	sed -i 's%^BR2_DL_DIR=.*%BR2_DL_DIR=\"$(BR2_DL_DIR)\"%' $(OUTPUT_DIR)/.config
-	sed -i 's%^BR2_GLOBAL_PATCH_DIR=.*%BR2_GLOBAL_PATCH_DIR=\"$(BR2_GLOBAL_PATCH_DIR)\"%' $(OUTPUT_DIR)/.config
