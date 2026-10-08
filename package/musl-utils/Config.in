@@ -1,0 +1,5 @@
+config BR2_PACKAGE_MUSL_UTILS
+	bool "musl-utils"
+	depends on BR2_TOOLCHAIN_USES_MUSL
+	help
+	  getconf, genent and iconv for musl.
