@@ -12,9 +12,3 @@ cat >etc/resolv.conf <<EOF
 nameserver 1.1.1.1
 nameserver 8.8.8.8
 EOF
-
-if [ -L etc/dropbear ] || [ ! -d etc/dropbear ]; then
-    rm -f etc/dropbear
-    mkdir etc/dropbear
-    chmod 700 etc/dropbear
-fi
