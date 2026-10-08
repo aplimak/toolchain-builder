@@ -327,6 +327,61 @@ static int enter_rootfs(const char *root, int dev_usable)
 /* Namespaces                                                    */
 /* ============================================================ */
 
+static int write_str_file(const char *path, const char *data)
+{
+    int fd = open(path, O_WRONLY);
+    if (fd < 0)
+        return -1;
+    ssize_t n = write(fd, data, strlen(data));
+    close(fd);
+    return (n == (ssize_t)strlen(data)) ? 0 : -1;
+}
+
+/*
+ * Called only when we are not already root.
+ * Creates a user namespace and maps our uid/gid to 0 inside it,
+ * so the rest of the launcher can rely on CAP_SYS_ADMIN etc.
+ * Returns 0 on success, -1 on failure (caller bails out).
+ */
+static int setup_userns(void)
+{
+    uid_t uid = getuid();
+    gid_t gid = getgid();
+    char buf[64];
+
+    if (unshare(CLONE_NEWUSER) != 0)
+    {
+        fprintf(stderr, "enter: unshare(CLONE_NEWUSER): %s\n", strerror(errno));
+        return -1;
+    }
+
+    /* Required before writing gid_map when not privileged in the parent. */
+    (void)write_str_file("/proc/self/setgroups", "deny");
+
+    snprintf(buf, sizeof(buf), "0 %u 1", (unsigned)uid);
+    if (write_str_file("/proc/self/uid_map", buf) != 0)
+    {
+        fprintf(stderr, "enter: uid_map: %s\n", strerror(errno));
+        return -1;
+    }
+
+    snprintf(buf, sizeof(buf), "0 %u 1", (unsigned)gid);
+    if (write_str_file("/proc/self/gid_map", buf) != 0)
+    {
+        fprintf(stderr, "enter: gid_map: %s\n", strerror(errno));
+        return -1;
+    }
+
+    /* gid first: setresuid(0,0,0) would drop our ability to change gid. */
+    if (setresgid(0, 0, 0) != 0 || setresuid(0, 0, 0) != 0)
+    {
+        fprintf(stderr, "enter: setresuid/setresgid: %s\n", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
 static int try_ns(int flag, const char *name)
 {
     if (unshare(flag) == 0)
@@ -529,6 +584,20 @@ int main(int argc, char *argv[])
     /* pre-flight /dev probe */
     snprintf(devpath, sizeof(devpath), "%s/dev", rootfs);
     dev_usable = is_usable_dev(devpath);
+
+    /* If we're not root, we need a user namespace. Everything after
+     * this point (mount ns, pid ns, mount calls, pivot_root, chroot,
+     * setuid, sethostname, mknod in /dev) relies on CAP_SYS_ADMIN
+     * inside the namespace, which uid 0 in a fresh userns has. */
+    if (geteuid() != 0)
+    {
+        if (setup_userns() != 0)
+        {
+            fprintf(stderr, "enter: cannot enter user namespace, "
+                            "rerun as root or enable unprivileged userns\n");
+            return 1;
+        }
+    }
 
     /* unshare PID */
     try_ns(CLONE_NEWPID, "pid"); /* fork below activates it */
