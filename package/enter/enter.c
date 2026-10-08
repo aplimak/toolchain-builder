@@ -8,9 +8,10 @@
  * Usage: enter [program [args...]]
  *
  * With no arguments, the launcher searches (in order):
- *   /sbin/init /etc/init /bin/init /init /linuxrc
- * and falls back to a shell:
- *   /bin/sh /bin/ash /bin/bash /usr/bin/sh
+ *   /bin/sh /bin/bash /bin/ash /usr/bin/sh
+ * In this mode only, /etc/init.d/rcS is run before the shell and
+ * /etc/init.d/rcK after it. When an explicit program is given,
+ * neither script runs.
  *
  * Namespaces are unshared one at a time so partial-namespace kernels
  * (Android, LXC, WSL1, older containers) keep whatever subset works.
@@ -376,11 +377,8 @@ static int get_self_dir(char *buf, size_t sz, const char *argv0)
 /* Init / shell search                                           */
 /* ============================================================ */
 
-static const char *const init_candidates[] = {
-    "/sbin/init", "/etc/init", "/bin/init", "/init", "/linuxrc", NULL};
-
 static const char *const shell_candidates[] = {
-    "/bin/sh", "/bin/ash", "/bin/bash", "/usr/bin/sh", NULL};
+    "/bin/sh", "/bin/bash", "/bin/ash", "/usr/bin/sh", NULL};
 
 static const char *find_in_rootfs(const char *root,
                                   const char *const *cands,
@@ -400,6 +398,57 @@ static const char *find_in_rootfs(const char *root,
     return NULL;
 }
 
+static int run_if_executable(const char *path)
+{
+    if (access(path, X_OK) != 0)
+        return 1;
+
+    pid_t pid = fork();
+
+    if (pid < 0)
+    {
+        perror("fork");
+        return -1;
+    }
+
+    if (pid == 0)
+    {
+        /* ---- CHILD process ---- */
+        char *argv[] = {(char *)path, NULL};
+
+        execv(path, argv);
+
+        perror("execv");
+        _exit(127);
+    }
+
+    /* ---- PARENT process ---- */
+    /* Wait for the child to finish so we don't leave a zombie. */
+    int status;
+    if (waitpid(pid, &status, 0) < 0)
+    {
+        perror("waitpid");
+        return -1;
+    }
+
+    if (WIFEXITED(status))
+    {
+        int code = WEXITSTATUS(status);
+        if (code != 0)
+        {
+            fprintf(stderr, "%s exited with status %d\n", path, code);
+            return -1;
+        }
+    }
+    else if (WIFSIGNALED(status))
+    {
+        fprintf(stderr, "%s killed by signal %d\n", path, WTERMSIG(status));
+        return -1;
+    }
+
+    return 0; /* success */
+}
+
 /* ============================================================ */
 /* main                                                          */
 /* ============================================================ */
@@ -413,13 +462,14 @@ int main(int argc, char *argv[])
     char usrpath[4096];
     char devpath[4096];
     char prog_buf[4096];
-    char *auto_argv[2];
+    char *auto_argv[3];
     char **child_argv;
     const char *prog;
     struct stat st;
     int dev_usable;
-    pid_t pid;
+    pid_t child_pid;
     int status;
+    int do_init = 0;
 
     /* find our own directory = candidate rootfs */
     if (get_self_dir(rootfs, sizeof(rootfs), argv[0]) != 0)
@@ -447,7 +497,7 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "enter: chdir(%s): %s\n",
                 rootfs, strerror(errno));
-        return -1;
+        return 1;
     }
 
     /* determine program to run */
@@ -460,20 +510,19 @@ int main(int argc, char *argv[])
     {
         const char *found;
 
-        found = find_in_rootfs(rootfs, init_candidates,
+        found = find_in_rootfs(rootfs, shell_candidates,
                                prog_buf, sizeof(prog_buf));
-        if (!found)
-            found = find_in_rootfs(rootfs, shell_candidates,
-                                   prog_buf, sizeof(prog_buf));
         if (!found)
         {
             fprintf(stderr,
                     "enter: no init, linuxrc or shell found in %s\n", rootfs);
             return 1;
         }
+        do_init = 1;
         prog = found;
         auto_argv[0] = prog_buf;
-        auto_argv[1] = NULL;
+        auto_argv[1] = "-l"; // login shell
+        auto_argv[2] = NULL;
         child_argv = auto_argv;
     }
 
@@ -485,15 +534,15 @@ int main(int argc, char *argv[])
     try_ns(CLONE_NEWPID, "pid"); /* fork below activates it */
 
     /* fork: with CLONE_NEWPID the child becomes PID 1 */
-    pid = fork();
-    if (pid < 0)
+    child_pid = fork();
+    if (child_pid < 0)
     {
         perror("fork");
         return 1;
     }
 
     // Child
-    if (pid == 0)
+    if (child_pid == 0)
     {
         if (!try_ns(CLONE_NEWNS, "mount"))
         {
@@ -535,20 +584,64 @@ int main(int argc, char *argv[])
         /* sanitise env */
         sanitize_env();
 
-        if (strchr(prog, '/'))
-            execve(prog, child_argv, environ);
-        else
-            execvp(prog, child_argv);
+        int do_deinit = 0;
+        if (do_init && run_if_executable("/etc/init.d/rcS") == 0)
+        {
+            do_deinit = 1;
+        }
 
-        fprintf(stderr, "enter: execve %s: %s\n",
-                prog, strerror(errno));
-        _exit(127);
+        pid_t launcher_pid = fork();
+
+        if (launcher_pid < 0)
+        {
+            perror("fork");
+            _exit(1);
+        }
+
+        if (launcher_pid == 0)
+        {
+            if (strchr(prog, '/'))
+                execve(prog, child_argv, environ);
+            else
+                execvp(prog, child_argv);
+
+            fprintf(stderr, "enter: execve %s: %s\n",
+                    prog, strerror(errno));
+            _exit(127);
+        }
+
+        for (;;)
+        {
+            if (waitpid(launcher_pid, &status, 0) >= 0)
+                break;
+
+            if (errno == EINTR)
+                continue;
+
+            perror("waitpid");
+            _exit(1);
+        }
+
+        // We must cleanup before exit
+        if (do_deinit)
+        {
+            run_if_executable("/etc/init.d/rcK");
+        }
+
+        if (WIFEXITED(status))
+            _exit(WEXITSTATUS(status));
+        if (WIFSIGNALED(status))
+            _exit(128 + WTERMSIG(status));
+        _exit(1);
     }
 
     // Parent
+    signal(SIGINT, SIG_IGN);
+    signal(SIGTERM, SIG_IGN);
+
     for (;;)
     {
-        if (waitpid(pid, &status, 0) >= 0)
+        if (waitpid(child_pid, &status, 0) >= 0)
             break;
 
         if (errno == EINTR)
