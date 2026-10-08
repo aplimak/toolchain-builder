@@ -111,26 +111,6 @@ static void ensure_dev(const char *devdir, const char *name,
     (void)mknod(path, S_IFCHR | mode, MAKEDEV(maj, min));
 }
 
-static void ensure_ptmx_link(const char *devdir)
-{
-    char ptmx[4096];
-
-    snprintf(ptmx, sizeof(ptmx), "%s/ptmx", devdir);
-
-    if (unlink(ptmx) != 0 && errno != ENOENT)
-    {
-        fprintf(stderr, "enter: unlink %s: %s\n",
-                ptmx, strerror(errno));
-        return;
-    }
-
-    if (symlink("pts/ptmx", ptmx) != 0)
-    {
-        fprintf(stderr, "enter: symlink %s: %s\n",
-                ptmx, strerror(errno));
-    }
-}
-
 static void fill_standard_links(const char *devdir)
 {
     char path[4096];
@@ -161,6 +141,7 @@ static void fill_vital_devices(const char *devdir)
     ensure_dev(devdir, "urandom", 1, 9, 0666);
     ensure_dev(devdir, "tty", 5, 0, 0666);
     ensure_dev(devdir, "console", 5, 1, 0600);
+    ensure_dev(devdir, "ptmx", 5, 2, 0666);
 
     fill_standard_links(devdir);
 }
@@ -216,7 +197,7 @@ static void setup_pseudo_fs(const char *root, int dev_usable)
     if (try_mount("devpts", path, "devpts", MS_NOSUID | MS_NOEXEC,
                   "mode=0620,ptmxmode=0666,newinstance") == 0)
     {
-        ensure_ptmx_link(devdir);
+        ensure_dev(path, "ptmx", 5, 2, 0000);
     }
 
     snprintf(path, sizeof(path), "%s/dev/shm", root);
