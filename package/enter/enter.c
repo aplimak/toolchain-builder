@@ -7,9 +7,8 @@
  *
  * Usage: enter [program [args...]]
  *
- * With no arguments, the launcher searches (in order):
- *   /bin/sh /bin/bash /bin/ash /usr/bin/sh
- * In this mode only, /etc/init.d/rcS is run before the shell and
+ * With no arguments, the launcher searches for login binary
+ * In this mode only, /etc/init.d/rcS is run before the login and
  * /etc/init.d/rcK after it. When an explicit program is given,
  * neither script runs.
  *
@@ -434,8 +433,8 @@ static int get_self_dir(char *buf, size_t sz, const char *argv0)
 /* Init / shell search                                           */
 /* ============================================================ */
 
-static const char *const shell_candidates[] = {
-    "/bin/sh", "/bin/bash", "/bin/ash", "/usr/bin/sh", NULL};
+static const char *const login_candidates[] = {
+    "/bin/login", "/usr/bin/login", "/sbin/login", "/usr/sbin/login", NULL};
 
 static const char *find_in_rootfs(const char *root,
                                   const char *const *cands,
@@ -519,7 +518,7 @@ int main(int argc, char *argv[])
     char usrpath[4096];
     char devpath[4096];
     char prog_buf[4096];
-    char *auto_argv[3];
+    char *auto_argv[4];
     char **child_argv;
     const char *prog;
     struct stat st;
@@ -567,19 +566,20 @@ int main(int argc, char *argv[])
     {
         const char *found;
 
-        found = find_in_rootfs(rootfs, shell_candidates,
+        found = find_in_rootfs(rootfs, login_candidates,
                                prog_buf, sizeof(prog_buf));
         if (!found)
         {
             fprintf(stderr,
-                    "enter: no init, linuxrc or shell found in %s\n", rootfs);
+                    "enter: no login binary found in %s\n", rootfs);
             return 1;
         }
         do_init = 1;
         prog = found;
         auto_argv[0] = prog_buf;
-        auto_argv[1] = "-l"; // login shell
-        auto_argv[2] = NULL;
+        auto_argv[1] = "-f"; // auto login
+        auto_argv[2] = "root";
+        auto_argv[3] = NULL;
         child_argv = auto_argv;
     }
 
