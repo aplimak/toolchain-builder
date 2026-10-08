@@ -212,6 +212,8 @@ static void setup_pseudo_fs(const char *root, int dev_usable)
     snprintf(path, sizeof(path), "%s/run", root);
     (void)mkdir(path, 0755);
     try_mount("tmpfs", path, "tmpfs", MS_NOSUID | MS_NODEV, "mode=0755");
+    snprintf(path, sizeof(path), "%s/run/lock", root);
+    (void)mkdir(path, 0755);
 }
 
 /* ============================================================ */
