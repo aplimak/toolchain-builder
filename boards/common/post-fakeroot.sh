@@ -13,4 +13,6 @@ nameserver 1.1.1.1
 nameserver 8.8.8.8
 EOF
 
-[ ! -f /bin/ldd ] && ln -sf /lib/libc.so /bin/ldd
+if [ ! -f bin/ldd ]; then
+    ln -sf /lib/libc.so bin/ldd
+fi
