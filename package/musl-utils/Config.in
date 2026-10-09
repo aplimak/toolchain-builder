@@ -1,5 +1,9 @@
 config BR2_PACKAGE_MUSL_UTILS
 	bool "musl-utils"
 	depends on BR2_TOOLCHAIN_USES_MUSL
+	depends on !BR2_PACKAGE_GETENT
 	help
 	  getconf, genent and iconv for musl.
+
+comment "musl-utils is not available because getent is selected"
+    depends on BR2_PACKAGE_GETENT
