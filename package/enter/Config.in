@@ -2,15 +2,18 @@ config BR2_PACKAGE_ENTER
 	bool "enter"
 	depends on BR2_USE_MMU
 	help
-	  Portable isolated-rootfs launcher.
+	  Static isolated-rootfs launcher with best-effort namespace isolation.
 
 	  Installs /enter in the target rootfs. Copy that binary into
 	  another rootfs at <rootfs>/enter and run it: the launcher
 	  takes its own parent directory as the rootfs and enters it
 	  with whatever isolation the running kernel permits.
 
-	  Handles partial namespaces (Android, LXC, WSL1), pre-existing
-	  /dev directories, missing devtmpfs, and env sanitisation.
+	  Optional PID, UTS, and IPC namespaces are enabled when supported.
+	  A mount namespace is required. Running as a non-root user requires
+	  unprivileged user namespaces to be enabled by the host kernel.
+	  Missing OverlayFS, devtmpfs, sysfs, and devpts support use documented
+	  fallbacks or warnings where possible.
 
-	  The parent directory must contain /usr or the launcher bails
-	  out.
+	  The rootfs directory must contain /usr and /tmp. A usable /dev and
+	  mounted /proc on the host are required; setup failures are reported as errors.
