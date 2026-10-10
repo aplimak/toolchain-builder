@@ -5,5 +5,13 @@
 /config.log
 /config.status
 /enter
+/test-driver
+/test-suite.log
+/test-suite.trs
 /.deps/
 /*.o
+/tests/test_enter
+/tests/*.o
+/tests/test_enter.log
+/tests/test_enter.trs
+/tests/.deps/

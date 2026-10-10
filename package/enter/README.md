@@ -28,6 +28,26 @@ on libraries inside the target rootfs.
 To regenerate the checked-in Autoconf/Automake files after editing
 `configure.ac` or `Makefile.am`, run `autoreconf -fi` from this directory.
 
+## Tests
+
+Tests are opt-in and are not part of the default build:
+
+```sh
+mkdir build-tests
+cd build-tests
+../configure --enable-tests
+make check
+```
+
+The suite runs natively on the build machine. It tests filesystem helpers using
+temporary directories, environment sanitization in a child process, diagnostic
+filtering, process exit/signal handling, process naming, and PTY attachment and
+I/O. PTY checks are skipped when the host cannot allocate a PTY. Tests do not
+mount filesystems, create namespaces, change the root, or modify host device
+nodes. Buildroot explicitly configures `--disable-tests`; use the native suite
+for behavior checks because a cross-built target test executable cannot be run
+by the Buildroot host build.
+
 ```sh
 /path/to/rootfs/enter /bin/sh
 ```

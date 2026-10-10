@@ -9,7 +9,7 @@ ENTER_SITE = $(BR2_EXTERNAL_AELIUX_EXTERNAL_PATH)/package/enter
 ENTER_SITE_METHOD = local
 ENTER_LICENSE = MIT
 ENTER_LICENSE_FILES =
-ENTER_CONF_OPTS = --enable-static --bindir=/
+ENTER_CONF_OPTS = --enable-static --bindir=/ --disable-tests
 
 ifeq ($(BR2_PACKAGE_ENTER_RUNTIME_WARNINGS),y)
 ENTER_CONF_OPTS += --enable-runtime-warnings

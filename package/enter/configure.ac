@@ -2,7 +2,7 @@ AC_PREREQ([2.69])
 AC_INIT([enter], [1.0])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_MAINTAINER_MODE([disable])
 AC_CONFIG_HEADERS([config.h])
 
@@ -48,6 +48,14 @@ AS_IF([test "x$enable_runtime_warnings" = "xyes"],
     [AC_DEFINE([ENABLE_RUNTIME_WARNINGS], [1], [Emit recoverable runtime warning messages])],
     [AC_DEFINE([ENABLE_RUNTIME_WARNINGS], [0], [Emit recoverable runtime warning messages])]
 )
+
+AC_ARG_ENABLE(
+    [tests],
+    [AS_HELP_STRING([--enable-tests], [build the optional native test suite])],
+    [],
+    [enable_tests=no]
+)
+AM_CONDITIONAL([BUILD_TESTS], [test "x$enable_tests" = "xyes"])
 
 AC_ARG_ENABLE(
     [static],

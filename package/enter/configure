@@ -627,6 +627,8 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
 ENTER_STATIC_LDFLAGS
+BUILD_TESTS_FALSE
+BUILD_TESTS_TRUE
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
@@ -736,6 +738,7 @@ enable_shared
 with_xmlto
 with_fop
 enable_runtime_warnings
+enable_tests
 enable_static
 '
       ac_precious_vars='build_alias
@@ -1381,6 +1384,7 @@ Optional Features:
 
   --disable-runtime-warnings
                           suppress recoverable runtime warning messages
+  --enable-tests          build the optional native test suite
   --enable-static         link enter statically
 
 Optional Packages:
@@ -6165,6 +6169,25 @@ printf '%s\n' "#define ENABLE_RUNTIME_WARNINGS 0" >>confdefs.h
 esac
 fi
 
+# Check whether --enable-tests was given.
+if test ${enable_tests+y}
+then :
+  enableval=$enable_tests;
+else case e in #(
+  e) enable_tests=no
+ ;;
+esac
+fi
+
+ if test "x$enable_tests" = "xyes"; then
+  BUILD_TESTS_TRUE=
+  BUILD_TESTS_FALSE='#'
+else
+  BUILD_TESTS_TRUE='#'
+  BUILD_TESTS_FALSE=
+fi
+
+
 # Check whether --enable-static was given.
 if test ${enable_static+y}
 then :
@@ -6324,6 +6347,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${BUILD_TESTS_TRUE}" && test -z "${BUILD_TESTS_FALSE}"; then
+  as_fn_error $? "conditional \"BUILD_TESTS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
