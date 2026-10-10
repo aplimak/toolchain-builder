@@ -109,7 +109,7 @@ static int run_child(const char *program, char *const arguments[], int search_pa
     sigset_t child_signal;
     sigset_t original_mask;
     pid_t child_pid;
-    int status;
+    int status = 0;
 
     if (install_child_signal_handler() != 0)
         return -1;
