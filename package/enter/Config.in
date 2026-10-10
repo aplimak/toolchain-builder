@@ -17,3 +17,15 @@ config BR2_PACKAGE_ENTER
 
 	  The rootfs directory must contain /usr and /tmp. A usable /dev and
 	  mounted /proc on the host are required; setup failures are reported as errors.
+
+if BR2_PACKAGE_ENTER
+
+config BR2_PACKAGE_ENTER_RUNTIME_WARNINGS
+	bool "Show recoverable runtime warnings"
+	default y
+	help
+	  Show non-fatal runtime warnings for optional features and
+	  fallback paths. Errors are always reported. Compiler warning
+	  diagnostics remain enabled regardless of this setting.
+
+endif

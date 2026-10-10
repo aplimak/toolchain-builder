@@ -1,8 +1,32 @@
 # enter
 
-`enter` is a statically linked Linux rootfs launcher. Install a copy at the
-root of a filesystem tree and run it from there. The executable's containing
-directory is the target root; it must contain `/usr` and `/tmp`.
+`enter` is a Linux rootfs launcher. Install a copy at the root of a filesystem
+tree and run it from there. The executable's containing directory is the target
+root; it must contain `/usr` and `/tmp`.
+
+## Building
+
+Autoconf's generated `configure` script and `Makefile.in` are included, so a
+normal standalone build needs a C compiler and GNU make, not Autoconf or
+Automake:
+
+```sh
+mkdir build
+cd build
+../configure --bindir=/ --enable-static
+make
+make install DESTDIR=/tmp/enter-root
+```
+
+Compiler diagnostics are always enabled (`-Wall -Wextra -Wformat=2`). Runtime
+warnings for recoverable failures are enabled by default; use
+`../configure --disable-runtime-warnings` to suppress those messages. Errors
+remain visible. Use `--enable-static` to request a static executable. Static
+linking is enabled by default for Buildroot, where the launcher must not depend
+on libraries inside the target rootfs.
+
+To regenerate the checked-in Autoconf/Automake files after editing
+`configure.ac` or `Makefile.am`, run `autoreconf -fi` from this directory.
 
 ```sh
 /path/to/rootfs/enter /bin/sh

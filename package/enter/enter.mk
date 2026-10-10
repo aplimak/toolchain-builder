@@ -9,25 +9,12 @@ ENTER_SITE = $(BR2_EXTERNAL_AELIUX_EXTERNAL_PATH)/package/enter
 ENTER_SITE_METHOD = local
 ENTER_LICENSE = MIT
 ENTER_LICENSE_FILES =
+ENTER_CONF_OPTS = --enable-static --bindir=/
 
-# Static link: the launcher must not depend on libraries in the rootfs.
-ENTER_SOURCES = \
-	$(@D)/main.c \
-	$(@D)/container.c \
-	$(@D)/diagnostics.c \
-	$(@D)/environment.c \
-	$(@D)/filesystem.c \
-	$(@D)/namespaces.c \
-	$(@D)/process.c
+ifeq ($(BR2_PACKAGE_ENTER_RUNTIME_WARNINGS),y)
+ENTER_CONF_OPTS += --enable-runtime-warnings
+else
+ENTER_CONF_OPTS += --disable-runtime-warnings
+endif
 
-define ENTER_BUILD_CMDS
-	$(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) \
-		-std=gnu99 -Wall -Wextra -Wformat=2 \
-		-static -o $(@D)/enter $(ENTER_SOURCES)
-endef
-
-define ENTER_INSTALL_TARGET_CMDS
-	$(INSTALL) -D -m 0755 $(@D)/enter $(TARGET_DIR)/enter
-endef
-
-$(eval $(generic-package))
+$(eval $(autotools-package))

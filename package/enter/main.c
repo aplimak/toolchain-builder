@@ -1,4 +1,10 @@
 /* SPDX-License-Identifier: MIT */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "container.h"
 #include "diagnostics.h"
 #include "filesystem.h"

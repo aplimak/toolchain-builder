@@ -1,4 +1,10 @@
 /* SPDX-License-Identifier: MIT */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "diagnostics.h"
 
 #include <errno.h>
@@ -9,6 +15,11 @@
 void diagnostic(enum diagnostic_level level, const char *format, ...)
 {
     va_list arguments;
+
+#if !ENABLE_RUNTIME_WARNINGS
+    if (level == DIAGNOSTIC_WARNING)
+        return;
+#endif
 
     fprintf(stderr, "%s: ",
             level == DIAGNOSTIC_ERROR ? "error" : "warning");

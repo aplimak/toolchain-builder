@@ -1,0 +1,9 @@
+/autom4te.cache/
+/config.h.in~
+/configure~
+/Makefile
+/config.log
+/config.status
+/enter
+/.deps/
+/*.o
