@@ -20,6 +20,7 @@ define MUSL_UTILS_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0755 $(@D)/getconf $(TARGET_DIR)/usr/bin/getconf
 	$(INSTALL) -D -m 0755 $(@D)/getent $(TARGET_DIR)/usr/bin/getent
 	$(INSTALL) -D -m 0755 $(@D)/iconv $(TARGET_DIR)/usr/bin/iconv
+	$(LN) -sf /lib/libc.so $(TARGET_DIR)/usr/bin/ldd
 endef
 
 $(eval $(generic-package))
