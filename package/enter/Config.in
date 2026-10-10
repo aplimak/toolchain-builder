@@ -12,7 +12,7 @@ config BR2_PACKAGE_ENTER
 	  Optional PID, UTS, and IPC namespaces are enabled when supported.
 	  A mount namespace is required. Running as a non-root user requires
 	  unprivileged user namespaces to be enabled by the host kernel.
-	  Missing OverlayFS, devtmpfs, sysfs, and devpts support use documented
+	  Missing OverlayFS, sysfs, and devpts support use documented
 	  fallbacks or warnings where possible.
 
 	  The rootfs directory must contain /usr and /tmp. A usable /dev and

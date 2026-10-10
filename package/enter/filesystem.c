@@ -247,21 +247,15 @@ static int setup_device_filesystem(void)
     {
         populate_device_directory(device_directory);
     }
-    else if (mount_filesystem("devtmpfs", device_directory, "devtmpfs",
-                              MS_NOSUID, NULL) == 0)
+    else if (mount_filesystem("tmpfs", device_directory, "tmpfs", MS_NOSUID,
+                              "mode=0755") == 0)
     {
         populate_device_directory(device_directory);
     }
     else
     {
-        diagnostic_errno(DIAGNOSTIC_WARNING, "devtmpfs unavailable; trying tmpfs /dev");
-        if (mount_filesystem("tmpfs", device_directory, "tmpfs", MS_NOSUID,
-                             "mode=0755") != 0)
-        {
-            diagnostic_errno(DIAGNOSTIC_ERROR, "cannot provide /dev");
-            return -1;
-        }
-        populate_device_directory(device_directory);
+        diagnostic_errno(DIAGNOSTIC_ERROR, "cannot provide /dev");
+        return -1;
     }
 
     if (!device_null_is_usable(device_directory))

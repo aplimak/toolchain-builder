@@ -73,8 +73,7 @@ kernels without OverlayFS continue on the original read-only root. This keeps
 the launcher usable on older Linux 3.x systems as well as newer kernels,
 subject to the host's namespace and mount policy.
 
-`/dev` must provide a usable character `/dev/null`: `devtmpfs` is preferred,
-with a `tmpfs` plus device-node fallback. A proc filesystem is required.
+`/dev` must provide a usable character `/dev/null`. A proc filesystem is required.
 `sysfs`, private `devpts`, and tmpfs mounts for `/tmp`, `/run`, and `/dev/shm`
 are optional conveniences; failures are warnings and leave the underlying
 rootfs paths available where possible. Private devpts first requests
