@@ -10,6 +10,6 @@ int filesystem_find_login(const char *root, char *program, size_t program_size);
 int filesystem_is_readonly(void);
 int filesystem_mount_root(int root_is_readonly);
 int filesystem_enter_root(void);
-int filesystem_setup_pseudo_filesystems(void);
+int filesystem_setup_pseudo_filesystems(int *private_devpts_available);
 
 #endif

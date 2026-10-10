@@ -346,22 +346,24 @@ static int private_devpts_multiplexer_is_usable(void)
     return 1;
 }
 
-static void link_private_devpts_multiplexer(void)
+static int link_private_devpts_multiplexer(void)
 {
     if (!private_devpts_multiplexer_is_usable())
-        return;
+        return 0;
 
     if (unlink("/dev/ptmx") != 0 && errno != ENOENT)
     {
         diagnostic_errno(DIAGNOSTIC_WARNING, "cannot replace /dev/ptmx");
-        return;
+        return 0;
     }
     if (symlink("pts/ptmx", "/dev/ptmx") != 0)
     {
         diagnostic_errno(DIAGNOSTIC_WARNING,
                          "cannot link /dev/ptmx to private devpts");
         (void)create_device("/dev", "ptmx", 5, 2, 0666);
+        return 0;
     }
+    return 1;
 }
 
 static int mount_optional_filesystem(const char *source, const char *target,
@@ -604,8 +606,10 @@ int filesystem_enter_root(void)
     return -1;
 }
 
-int filesystem_setup_pseudo_filesystems(void)
+int filesystem_setup_pseudo_filesystems(int *private_devpts_available)
 {
+    *private_devpts_available = 0;
+
     if (setup_device_filesystem() != 0)
         return -1;
 
@@ -630,7 +634,7 @@ int filesystem_setup_pseudo_filesystems(void)
     if (ensure_directory("/dev/pts", 0755) != 0)
         diagnostic_errno(DIAGNOSTIC_WARNING, "cannot prepare /dev/pts");
     else if (mount_private_devpts() == 0)
-        link_private_devpts_multiplexer();
+        *private_devpts_available = link_private_devpts_multiplexer();
 
     if (ensure_directory("/dev/shm", 01777) != 0)
         diagnostic_errno(DIAGNOSTIC_WARNING, "cannot prepare /dev/shm");

@@ -24,16 +24,17 @@ static void run_container_child(const char *program, char *const arguments[],
 {
     int root_is_readonly = filesystem_is_readonly();
     int init_script_started = 0;
+    int private_devpts_available = 0;
     int exit_status;
 
-    process_set_name(getpid() == 1 ? "[enter: init]" : "[enter: container]");
+    process_set_name(getpid() == 1 ? "enter-init" : "enter-container");
     if (namespaces_setup_child() != 0)
         _exit(1);
     if (filesystem_mount_root(root_is_readonly) != 0)
         _exit(1);
     if (filesystem_enter_root() != 0)
         _exit(126);
-    if (filesystem_setup_pseudo_filesystems() != 0)
+    if (filesystem_setup_pseudo_filesystems(&private_devpts_available) != 0)
         _exit(125);
     if (environment_sanitize() != 0)
         _exit(1);
@@ -42,7 +43,8 @@ static void run_container_child(const char *program, char *const arguments[],
         process_run_optional_script("/etc/init.d/rcS", &init_script_started) != 0)
         _exit(1);
 
-    exit_status = process_run_program(program, arguments);
+    exit_status = process_run_program(program, arguments,
+                                      private_devpts_available);
     if (run_init_scripts && init_script_started)
     {
         int cleanup_script_started;

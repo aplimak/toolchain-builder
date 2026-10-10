@@ -66,6 +66,12 @@ Standard device nodes are checked against their expected major/minor numbers
 and permissions. Resolver setup writes default nameservers into the ephemeral
 `/run/resolv.conf`.
 
+When private devpts is mounted and its PTY multiplexer is usable, `enter`
+allocates a PTY for the requested program, makes the slave its controlling
+terminal, and relays console input, output, and window-size changes. If PTY
+allocation fails, it warns and uses the inherited console descriptors. The
+launcher process labels fit Linux's 15-character process-name limit.
+
 Diagnostics use `enter: warning:` for recoverable issues and `enter: error:`
 for failures that stop startup or execution. Successful optional operations
 and deliberately ignored cleanup failures are quiet.
