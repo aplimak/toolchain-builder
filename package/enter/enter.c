@@ -42,6 +42,28 @@ extern char **environ;
 #define MAKEDEV(maj, min) makedev((maj), (min))
 #endif
 
+static volatile pid_t g_wanted_pid;
+static volatile sig_atomic_t g_wanted_reaped;
+static volatile int g_wanted_status;
+
+static void reap_children(int sig)
+{
+    (void)sig;
+    int saved_errno = errno;
+    int status;
+    pid_t pid;
+
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
+    {
+        if (pid == g_wanted_pid)
+        {
+            g_wanted_status = status;
+            g_wanted_reaped = 1;
+        }
+    }
+    errno = saved_errno;
+}
+
 /* ============================================================ */
 /* Environment                                                   */
 /* ============================================================ */
@@ -161,7 +183,7 @@ static int try_mount(const char *src, const char *tgt, const char *fstype,
     return -1;
 }
 
-static void setup_pseudo_fs(const char *root, int dev_usable)
+static void setup_pseudo_fs(const char *root)
 {
     char path[4096];
     char devdir[4096];
@@ -169,6 +191,7 @@ static void setup_pseudo_fs(const char *root, int dev_usable)
     /* /dev — preserve an existing usable tree */
     snprintf(devdir, sizeof(devdir), "%s/dev", root);
     (void)mkdir(devdir, 0755);
+    int dev_usable = is_usable_dev(devdir);
 
     if (dev_usable)
     {
@@ -262,16 +285,16 @@ static int do_pivot_root(void)
     return 0;
 }
 
-static int do_switch_root(const char *root)
+static int do_switch_root(void)
 {
     /*
-     * Move our self-bind mount to /.
+     * Move our current directory to /.
      *
      * This is useful as a fallback when pivot_root() cannot
      * operate on the current root setup.
      */
 
-    if (mount(root, "/", NULL, MS_MOVE, NULL) != 0)
+    if (mount(".", "/", NULL, MS_MOVE, NULL) != 0)
     {
         fprintf(stderr, "enter: move root: %s\n",
                 strerror(errno));
@@ -311,19 +334,19 @@ enum
     MODE_CHROOT
 };
 
-static int enter_rootfs(const char *root, int dev_usable)
+static int enter_rootfs()
 {
     if (do_pivot_root() == 0)
     {
-        setup_pseudo_fs("", dev_usable);
+        setup_pseudo_fs("");
         return MODE_PIVOT;
     }
 
     fprintf(stderr, "enter: pivot_root failed, trying switch_root\n");
 
-    if (do_switch_root(root) == 0)
+    if (do_switch_root() == 0)
     {
-        setup_pseudo_fs("", dev_usable);
+        setup_pseudo_fs("");
         return MODE_SHROOT;
     }
 
@@ -332,7 +355,7 @@ static int enter_rootfs(const char *root, int dev_usable)
 
     if (chroot(".") == 0 && chdir("/") == 0)
     {
-        setup_pseudo_fs("", dev_usable);
+        setup_pseudo_fs("");
         return MODE_CHROOT;
     }
 
@@ -356,22 +379,12 @@ static int write_str_file(const char *path, const char *data)
     return (n == (ssize_t)strlen(data)) ? 0 : -1;
 }
 
-/* Reap all zombie children (for PID 1) */
-static void reap_children(int sig)
-{
-    (void)sig;
-    int saved_errno = errno;
-    while (waitpid(-1, NULL, WNOHANG) > 0)
-        ;
-    errno = saved_errno;
-}
-
 /* Check if the current directory (rootfs) is writable */
 static int is_rootfs_readonly(void)
 {
     char testfile[4096];
     snprintf(testfile, sizeof(testfile), ".enter-write-test-%d", getpid());
-    int fd = open(testfile, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    int fd = open(testfile, O_WRONLY | O_CREAT | O_TRUNC, 0600);
     if (fd >= 0)
     {
         close(fd);
@@ -503,19 +516,26 @@ static int run_if_executable(const char *path)
     if (access(path, X_OK) != 0)
         return 1;
 
+    sigset_t chld_mask, old_mask;
+    sigemptyset(&chld_mask);
+    sigaddset(&chld_mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &chld_mask, &old_mask);
+
     pid_t pid = fork();
 
     if (pid < 0)
     {
         perror("fork");
+        sigprocmask(SIG_SETMASK, &old_mask, NULL);
         return -1;
     }
 
     if (pid == 0)
     {
         /* ---- CHILD process ---- */
-        char *argv[] = {(char *)path, NULL};
+        sigprocmask(SIG_SETMASK, &old_mask, NULL);
 
+        char *argv[] = {(char *)path, NULL};
         execv(path, argv);
 
         perror("execv");
@@ -523,13 +543,14 @@ static int run_if_executable(const char *path)
     }
 
     /* ---- PARENT process ---- */
-    /* Wait for the child to finish so we don't leave a zombie. */
     int status;
     if (waitpid(pid, &status, 0) < 0)
     {
         perror("waitpid");
+        sigprocmask(SIG_SETMASK, &old_mask, NULL);
         return -1;
     }
+    sigprocmask(SIG_SETMASK, &old_mask, NULL);
 
     if (WIFEXITED(status))
     {
@@ -559,10 +580,9 @@ static int mount_overlay(void)
                 strerror(errno));
         return 1;
     }
-    if ((mkdir("./tmp/upper", 0755) ||
-         mkdir("./tmp/work", 0755) ||
-         mkdir("./tmp/overlay", 0755)) &&
-        errno != EEXIST)
+    if ((mkdir("./tmp/upper", 0755) != 0 && errno != EEXIST) ||
+        (mkdir("./tmp/work", 0755) != 0 && errno != EEXIST) ||
+        (mkdir("./tmp/overlay", 0755) != 0 && errno != EEXIST))
     {
         perror("mkdir");
         umount2("./tmp", MNT_DETACH);
@@ -609,7 +629,6 @@ int main(int argc, char *argv[])
     char **child_argv;
     const char *prog;
     struct stat st;
-    int dev_usable;
     pid_t child_pid;
     int status;
     int do_init = 0;
@@ -677,10 +696,6 @@ int main(int argc, char *argv[])
         child_argv = auto_argv;
     }
 
-    /* pre-flight /dev probe */
-    snprintf(devpath, sizeof(devpath), "%s/dev", rootfs);
-    dev_usable = is_usable_dev(devpath);
-
     /* If we're not root, we need a user namespace. Everything after
      * this point (mount ns, pid ns, mount calls, pivot_root, chroot,
      * setuid, sethostname, mknod in /dev) relies on CAP_SYS_ADMIN
@@ -728,15 +743,11 @@ int main(int argc, char *argv[])
                 argv[0] = cont_name;
         }
 
-        /* If we are PID 1, reap zombies */
-        if (is_init)
-        {
-            struct sigaction sa;
-            sa.sa_handler = reap_children;
-            sigemptyset(&sa.sa_mask);
-            sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-            sigaction(SIGCHLD, &sa, NULL);
-        }
+        struct sigaction sa;
+        sa.sa_handler = reap_children;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+        sigaction(SIGCHLD, &sa, NULL);
 
         if (!try_ns(CLONE_NEWNS, "mount"))
         {
@@ -781,7 +792,7 @@ int main(int argc, char *argv[])
         try_ns(CLONE_NEWIPC, "ipc");
         // try_ns(CLONE_NEWNET, "net");
 
-        int mode = enter_rootfs(rootfs, dev_usable);
+        int mode = enter_rootfs();
 
         if (mode == MODE_FAIL)
         {
@@ -793,7 +804,7 @@ int main(int argc, char *argv[])
         sanitize_env();
 
         int do_deinit = 0;
-        if (do_init && run_if_executable("/etc/init.d/rcS") == 0)
+        if (do_init && run_if_executable("/etc/init.d/rcS") != 1)
         {
             do_deinit = 1;
         }
@@ -818,17 +829,21 @@ int main(int argc, char *argv[])
             _exit(127);
         }
 
-        for (;;)
-        {
-            if (waitpid(launcher_pid, &status, 0) >= 0)
-                break;
+        /* Block SIGCHLD while we install the wanted pid, so the handler
+         * cannot reap launcher_pid before we record its status. */
+        sigset_t chld_mask, old_mask;
+        sigemptyset(&chld_mask);
+        sigaddset(&chld_mask, SIGCHLD);
+        sigprocmask(SIG_BLOCK, &chld_mask, &old_mask);
 
-            if (errno == EINTR)
-                continue;
+        g_wanted_pid = launcher_pid;
+        g_wanted_reaped = 0;
 
-            perror("waitpid");
-            _exit(1);
-        }
+        while (!g_wanted_reaped)
+            sigsuspend(&old_mask); /* atomically unblocks CHLD + waits */
+
+        sigprocmask(SIG_SETMASK, &old_mask, NULL);
+        status = g_wanted_status;
 
         // We must cleanup before exit
         if (do_deinit)
