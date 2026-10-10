@@ -32,6 +32,7 @@
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <sys/prctl.h>
 
 extern char **environ;
 
@@ -211,6 +212,23 @@ static void setup_pseudo_fs(const char *root, int dev_usable)
     snprintf(path, sizeof(path), "%s/run", root);
     (void)mkdir(path, 0755);
     try_mount("tmpfs", path, "tmpfs", MS_NOSUID | MS_NODEV, "mode=0755");
+
+    /* Create /run/resolv.conf with default nameservers */
+    snprintf(path, sizeof(path), "%s/run/resolv.conf", root);
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd >= 0)
+    {
+        const char *resolv = "nameserver 1.1.1.1\nnameserver 8.8.8.8\n";
+        ssize_t n = write(fd, resolv, strlen(resolv));
+        (void)n; /* ignore short writes for simplicity */
+        close(fd);
+    }
+    else
+    {
+        fprintf(stderr, "enter: cannot create %s: %s\n",
+                path, strerror(errno));
+    }
+
     snprintf(path, sizeof(path), "%s/run/lock", root);
     (void)mkdir(path, 0755);
 }
@@ -336,6 +354,32 @@ static int write_str_file(const char *path, const char *data)
     ssize_t n = write(fd, data, strlen(data));
     close(fd);
     return (n == (ssize_t)strlen(data)) ? 0 : -1;
+}
+
+/* Reap all zombie children (for PID 1) */
+static void reap_children(int sig)
+{
+    (void)sig;
+    int saved_errno = errno;
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+        ;
+    errno = saved_errno;
+}
+
+/* Check if the current directory (rootfs) is writable */
+static int is_rootfs_readonly(void)
+{
+    char testfile[4096];
+    snprintf(testfile, sizeof(testfile), ".enter-write-test-%d", getpid());
+    int fd = open(testfile, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (fd >= 0)
+    {
+        close(fd);
+        unlink(testfile);
+        return 0; /* writable */
+    }
+    /* EROFS or EACCES means read-only; other errors treat as read-only */
+    return 1;
 }
 
 /*
@@ -505,6 +549,48 @@ static int run_if_executable(const char *path)
     return 0; /* success */
 }
 
+static int mount_overlay(void)
+{
+    /* Make /tmp writable with tmpfs */
+    if (mount("tmpfs", "./tmp", "tmpfs",
+              MS_NOSUID | MS_NODEV, "mode=1777") != 0)
+    {
+        fprintf(stderr, "enter: mount tmpfs on /tmp: %s\n",
+                strerror(errno));
+        return 1;
+    }
+    if ((mkdir("./tmp/upper", 0755) ||
+         mkdir("./tmp/work", 0755) ||
+         mkdir("./tmp/overlay", 0755)) &&
+        errno != EEXIST)
+    {
+        perror("mkdir");
+        umount2("./tmp", MNT_DETACH);
+        return 1;
+    }
+
+    char overlay_opts[4096];
+    snprintf(overlay_opts, sizeof(overlay_opts),
+             "lowerdir=.,upperdir=./tmp/upper,workdir=./tmp/work");
+    if (mount("overlay", "./tmp/overlay", "overlay",
+              MS_NOSUID | MS_NODEV, overlay_opts) != 0)
+    {
+        fprintf(stderr, "enter: mount overlay: %s\n",
+                strerror(errno));
+        umount2("./tmp", MNT_DETACH);
+        return 1;
+    }
+    if (chdir("./tmp/overlay") != 0)
+    {
+        perror("chdir overlay");
+        umount2("./tmp/overlay", MNT_DETACH);
+        umount2("./tmp", MNT_DETACH);
+        return 1;
+    }
+
+    return 0;
+}
+
 /* ============================================================ */
 /* main                                                          */
 /* ============================================================ */
@@ -516,6 +602,7 @@ int main(int argc, char *argv[])
     char rootfs[4096];
     char resolved[4096];
     char usrpath[4096];
+    char tmppath[4096];
     char devpath[4096];
     char prog_buf[4096];
     char *auto_argv[4];
@@ -546,6 +633,13 @@ int main(int argc, char *argv[])
     if (stat(usrpath, &st) != 0 || !S_ISDIR(st.st_mode))
     {
         fprintf(stderr, "enter: %s is not a rootfs (no /usr)\n", rootfs);
+        return 1;
+    }
+
+    snprintf(tmppath, sizeof(tmppath), "%s/tmp", rootfs);
+    if (stat(tmppath, &st) != 0 || !S_ISDIR(st.st_mode))
+    {
+        fprintf(stderr, "enter: %s is not a rootfs (no /tmp)\n", rootfs);
         return 1;
     }
 
@@ -615,6 +709,35 @@ int main(int argc, char *argv[])
     // Child
     if (child_pid == 0)
     {
+        int is_init = getpid() == 1;
+        int is_readonly = is_rootfs_readonly();
+
+        /* Rename child process */
+        if (is_init)
+        {
+            prctl(PR_SET_NAME, "[enter: init]", 0, 0, 0);
+            char *init_name = strdup("[enter: init]");
+            if (init_name)
+                argv[0] = init_name;
+        }
+        else
+        {
+            prctl(PR_SET_NAME, "[enter: container]", 0, 0, 0);
+            char *cont_name = strdup("[enter: container]");
+            if (cont_name)
+                argv[0] = cont_name;
+        }
+
+        /* If we are PID 1, reap zombies */
+        if (is_init)
+        {
+            struct sigaction sa;
+            sa.sa_handler = reap_children;
+            sigemptyset(&sa.sa_mask);
+            sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+            sigaction(SIGCHLD, &sa, NULL);
+        }
+
         if (!try_ns(CLONE_NEWNS, "mount"))
         {
             _exit(1);
@@ -628,11 +751,25 @@ int main(int argc, char *argv[])
             _exit(1);
         }
 
-        if (mount(".", ".", NULL, MS_BIND, NULL) != 0)
+        int root_mountpoint = 0;
+        if (is_readonly)
         {
-            fprintf(stderr, "enter: bind self: %s\n",
-                    strerror(errno));
-            _exit(1);
+            root_mountpoint = mount_overlay() == 0;
+        }
+
+        if (!root_mountpoint)
+        {
+            if (mount(".", ".", NULL, MS_BIND, NULL) != 0)
+            {
+                fprintf(stderr, "enter: bind self: %s\n",
+                        strerror(errno));
+                _exit(1);
+            }
+            if (chdir(".") != 0)
+            {
+                perror("chdir self");
+                _exit(1);
+            }
         }
 
         if (try_ns(CLONE_NEWUTS, "uts"))
@@ -709,6 +846,12 @@ int main(int argc, char *argv[])
     // Parent
     signal(SIGINT, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
+
+    /* Rename parent process */
+    prctl(PR_SET_NAME, "[enter: host]", 0, 0, 0);
+    char *host_name = strdup("[enter: host]");
+    if (host_name)
+        argv[0] = host_name;
 
     for (;;)
     {
