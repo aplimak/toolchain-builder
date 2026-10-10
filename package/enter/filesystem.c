@@ -113,20 +113,46 @@ static int create_device(const char *directory, const char *name,
                          mode_t permissions)
 {
     char path[PATH_MAX];
+    struct stat path_status;
     struct stat status;
+    int target_exists;
 
     if (format_root_path(path, sizeof(path), directory, name) != 0)
         return -1;
-    if (stat(path, &status) == 0)
+    if (lstat(path, &path_status) == 0)
     {
-        if (S_ISCHR(status.st_mode))
-            return 0;
-        if (unlink(path) != 0)
+        target_exists = stat(path, &status) == 0;
+        if (!target_exists && errno != ENOENT)
         {
-            diagnostic(DIAGNOSTIC_WARNING, "cannot remove invalid device node %s: %s",
+            diagnostic(DIAGNOSTIC_WARNING, "cannot inspect device target %s: %s",
                        path, strerror(errno));
             return -1;
         }
+        if (target_exists && S_ISCHR(status.st_mode) &&
+            major(status.st_rdev) == major_number &&
+            minor(status.st_rdev) == minor_number)
+        {
+            if ((status.st_mode & 07777) == permissions ||
+                chmod(path, permissions) == 0)
+                return 0;
+            diagnostic(DIAGNOSTIC_WARNING,
+                       "cannot set device node permissions on %s: %s",
+                       path, strerror(errno));
+            return -1;
+        }
+        if (unlink(path) != 0)
+        {
+            diagnostic(DIAGNOSTIC_WARNING,
+                       "cannot remove invalid device path %s: %s",
+                       path, strerror(errno));
+            return -1;
+        }
+    }
+    else if (errno != ENOENT)
+    {
+        diagnostic(DIAGNOSTIC_WARNING, "cannot inspect device path %s: %s",
+                   path, strerror(errno));
+        return -1;
     }
 
     if (mknod(path, S_IFCHR | permissions,
@@ -192,7 +218,9 @@ static int device_null_is_usable(const char *device_directory)
     int descriptor;
 
     if (format_root_path(path, sizeof(path), device_directory, "null") != 0 ||
-        stat(path, &status) != 0 || !S_ISCHR(status.st_mode))
+        stat(path, &status) != 0 || !S_ISCHR(status.st_mode) ||
+        major(status.st_rdev) != 1 || minor(status.st_rdev) != 3 ||
+        (status.st_mode & 0666) != 0666)
         return 0;
     descriptor = open(path, O_WRONLY);
     if (descriptor < 0)
@@ -239,15 +267,96 @@ static int setup_device_filesystem(void)
     return 0;
 }
 
+static int mount_private_devpts(void)
+{
+    static const char full_options[] =
+        "mode=0620,ptmxmode=0666,newinstance";
+    static const char compatible_options[] = "mode=0620,newinstance";
+    int first_error;
+
+    if (mount_filesystem("devpts", "/dev/pts", "devpts",
+                         MS_NOSUID | MS_NOEXEC, full_options) == 0)
+        return 0;
+    first_error = errno;
+
+    if (mount_filesystem("devpts", "/dev/pts", "devpts",
+                         MS_NOSUID | MS_NOEXEC, compatible_options) == 0)
+    {
+        diagnostic(DIAGNOSTIC_WARNING,
+                   "devpts rejected ptmxmode option (%s); validating node permissions",
+                   strerror(first_error));
+        return 0;
+    }
+    diagnostic_errno(DIAGNOSTIC_WARNING, "cannot mount private devpts");
+    return -1;
+}
+
+static int private_devpts_multiplexer_is_usable(void)
+{
+    struct stat status;
+    int descriptor;
+
+    if (stat("/dev/pts/ptmx", &status) != 0)
+    {
+        diagnostic_errno(DIAGNOSTIC_WARNING,
+                         "private devpts has no usable /dev/pts/ptmx");
+        return 0;
+    }
+    if (!S_ISCHR(status.st_mode) || major(status.st_rdev) != 5 ||
+        minor(status.st_rdev) != 2)
+    {
+        diagnostic(DIAGNOSTIC_WARNING,
+                   "/dev/pts/ptmx is not the expected character device; keeping /dev/ptmx fallback");
+        return 0;
+    }
+
+    if ((status.st_mode & 07777) != 0666 && chmod("/dev/pts/ptmx", 0666) != 0)
+    {
+        diagnostic_errno(DIAGNOSTIC_WARNING,
+                         "cannot set /dev/pts/ptmx permissions; keeping /dev/ptmx fallback");
+        return 0;
+    }
+    if (stat("/dev/pts/ptmx", &status) != 0 ||
+        !S_ISCHR(status.st_mode) || major(status.st_rdev) != 5 ||
+        minor(status.st_rdev) != 2 || (status.st_mode & 0666) != 0666)
+    {
+        diagnostic(DIAGNOSTIC_WARNING,
+                   "/dev/pts/ptmx remains unusable; keeping /dev/ptmx fallback");
+        return 0;
+    }
+
+    descriptor = open("/dev/pts/ptmx", O_RDWR | O_NOCTTY | O_CLOEXEC);
+    if (descriptor < 0)
+    {
+        diagnostic_errno(DIAGNOSTIC_WARNING,
+                         "cannot open private /dev/pts/ptmx; keeping /dev/ptmx fallback");
+        return 0;
+    }
+    if (close(descriptor) != 0)
+    {
+        diagnostic_errno(DIAGNOSTIC_WARNING,
+                         "cannot close private /dev/pts/ptmx; keeping /dev/ptmx fallback");
+        return 0;
+    }
+    return 1;
+}
+
 static void link_private_devpts_multiplexer(void)
 {
+    if (!private_devpts_multiplexer_is_usable())
+        return;
+
     if (unlink("/dev/ptmx") != 0 && errno != ENOENT)
     {
         diagnostic_errno(DIAGNOSTIC_WARNING, "cannot replace /dev/ptmx");
         return;
     }
     if (symlink("pts/ptmx", "/dev/ptmx") != 0)
-        diagnostic_errno(DIAGNOSTIC_WARNING, "cannot link /dev/ptmx to private devpts");
+    {
+        diagnostic_errno(DIAGNOSTIC_WARNING,
+                         "cannot link /dev/ptmx to private devpts");
+        (void)create_device("/dev", "ptmx", 5, 2, 0666);
+    }
 }
 
 static int mount_optional_filesystem(const char *source, const char *target,
@@ -515,9 +624,7 @@ int filesystem_setup_pseudo_filesystems(void)
 
     if (ensure_directory("/dev/pts", 0755) != 0)
         diagnostic_errno(DIAGNOSTIC_WARNING, "cannot prepare /dev/pts");
-    else if (mount_optional_filesystem("devpts", "/dev/pts", "devpts",
-                                       MS_NOSUID | MS_NOEXEC,
-                                       "mode=0620,ptmxmode=0666,newinstance") == 0)
+    else if (mount_private_devpts() == 0)
         link_private_devpts_multiplexer();
 
     if (ensure_directory("/dev/shm", 01777) != 0)

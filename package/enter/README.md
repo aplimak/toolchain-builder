@@ -33,8 +33,14 @@ subject to the host's namespace and mount policy.
 with a `tmpfs` plus device-node fallback. A proc filesystem is required.
 `sysfs`, private `devpts`, and tmpfs mounts for `/tmp`, `/run`, and `/dev/shm`
 are optional conveniences; failures are warnings and leave the underlying
-rootfs paths available where possible. Resolver setup writes default
-nameservers into the ephemeral `/run/resolv.conf`.
+rootfs paths available where possible. Private devpts first requests
+`ptmxmode=0666`, then retries without that option for kernels that reject it.
+`/dev/ptmx` is linked to `/dev/pts/ptmx` only after the latter is verified as
+character device 5:2, adjusted to mode `0666`, and successfully opened; an
+unusable or missing target leaves the direct `/dev/ptmx` device node in place.
+Standard device nodes are checked against their expected major/minor numbers
+and permissions. Resolver setup writes default nameservers into the ephemeral
+`/run/resolv.conf`.
 
 Diagnostics use `enter: warning:` for recoverable issues and `enter: error:`
 for failures that stop startup or execution. Successful optional operations
