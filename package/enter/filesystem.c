@@ -653,12 +653,12 @@ int filesystem_enter_root(void)
     if (enter_with_pivot_root() == 0)
         return 0;
     diagnostic_errno(DIAGNOSTIC_WARNING,
-                     "pivot_root failed; trying move-mount fallback");
+                     "pivot_root failed");
 
     if (enter_with_move_mount() == 0)
         return 0;
     diagnostic_errno(DIAGNOSTIC_WARNING,
-                     "move-mount fallback failed; trying chroot");
+                     "move-mount failed");
 
     if (chroot(".") == 0 && chdir("/") == 0)
         return 0;
