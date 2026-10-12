@@ -576,7 +576,9 @@ static int enter_with_pivot_root(void)
 
 static int enter_with_move_mount(void)
 {
-    if (mount(".", "/", NULL, MS_MOVE, NULL) != 0)
+    char resolved[PATH_MAX];
+    realpath(".", resolved);
+    if (mount(resolved, "/", NULL, MS_MOVE, NULL) != 0)
         return -1;
     if (chroot(".") != 0)
         return -1;
