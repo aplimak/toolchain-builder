@@ -22,6 +22,18 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifndef OPEN_TREE_CLONE
+#define OPEN_TREE_CLONE 1
+#endif
+#ifndef OPEN_TREE_CLOEXEC
+#define OPEN_TREE_CLOEXEC O_CLOEXEC
+#endif
+#ifndef AT_RECURSIVE
+#define AT_RECURSIVE 0x8000
+#endif
+#ifndef MOVE_MOUNT_F_EMPTY_PATH
+#define MOVE_MOUNT_F_EMPTY_PATH 0x00000004
+#endif
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -547,16 +559,53 @@ int filesystem_mount_root(int root_is_readonly)
     return 0;
 }
 
-static int enter_with_pivot_root(void)
+static int enter_with_open_tree(void)
 {
-    char old_root[] = ".enter-oldroot-XXXXXX";
+#if defined(SYS_open_tree) && defined(SYS_move_mount)
+    int root_descriptor;
     char resolved[PATH_MAX];
     if (!realpath(".", resolved))
     {
         return -1;
     }
 
+    root_descriptor = (int)syscall(SYS_open_tree, AT_FDCWD, resolved,
+                                   OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC |
+                                       AT_RECURSIVE);
+    if (root_descriptor < 0)
+        return -1;
+
+    if (syscall(SYS_move_mount, root_descriptor, "", AT_FDCWD, "/",
+                MOVE_MOUNT_F_EMPTY_PATH) != 0)
+    {
+        int saved_errno = errno;
+        (void)close(root_descriptor);
+        errno = saved_errno;
+        return -1;
+    }
+    if (close(root_descriptor) != 0)
+        return -1;
+
+    if (chroot(".") != 0)
+        return -1;
+    return chdir("/");
+#else
+    errno = ENOSYS;
+    return -1;
+#endif
+}
+
+static int enter_with_pivot_root(void)
+{
+    char old_root[] = ".enter-oldroot-XXXXXX";
+
 #ifdef SYS_pivot_root
+    char resolved[PATH_MAX];
+    if (!realpath(".", resolved))
+    {
+        return -1;
+    }
+
     if (!mkdtemp(old_root))
         return -1;
     if (syscall(SYS_pivot_root, resolved, old_root) != 0)
@@ -595,18 +644,26 @@ static int enter_with_move_mount(void)
 
 int filesystem_enter_root(void)
 {
+    if (enter_with_open_tree() == 0)
+        return 0;
+    if (errno != ENOSYS)
+        diagnostic_errno(DIAGNOSTIC_WARNING,
+                         "open_tree failed");
+
     if (enter_with_pivot_root() == 0)
         return 0;
     diagnostic_errno(DIAGNOSTIC_WARNING,
                      "pivot_root failed; trying move-mount fallback");
+
     if (enter_with_move_mount() == 0)
         return 0;
     diagnostic_errno(DIAGNOSTIC_WARNING,
                      "move-mount fallback failed; trying chroot");
+
     if (chroot(".") == 0 && chdir("/") == 0)
         return 0;
     diagnostic_errno(DIAGNOSTIC_ERROR,
-                     "cannot enter rootfs with pivot_root, move mount, or chroot");
+                     "cannot enter rootfs");
     return -1;
 }
 
