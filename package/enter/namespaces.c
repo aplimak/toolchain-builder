@@ -98,7 +98,7 @@ int namespaces_try_pid(void)
     if (unshare(CLONE_NEWPID) == 0)
         return 1;
     diagnostic_errno(DIAGNOSTIC_WARNING,
-                     "PID namespace unavailable; continuing without one");
+                     "PID namespace unavailable");
 #else
     diagnostic(DIAGNOSTIC_WARNING, "PID namespaces are unavailable in these headers");
 #endif

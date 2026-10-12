@@ -15,3 +15,5 @@
 /tests/test_enter.log
 /tests/test_enter.trs
 /tests/.deps/
+
+/build/
