@@ -564,14 +564,12 @@ static int enter_with_open_tree(void)
 #if defined(SYS_open_tree) && defined(SYS_move_mount)
     int root_descriptor;
     char resolved[PATH_MAX];
-    if (!realpath(".", resolved))
-    {
-        return -1;
-    }
 
-    root_descriptor = (int)syscall(SYS_open_tree, AT_FDCWD, resolved,
-                                   OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC |
-                                       AT_RECURSIVE);
+    if (!realpath(".", resolved))
+        return -1;
+
+    root_descriptor = syscall(SYS_open_tree, AT_FDCWD, resolved,
+                              OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC | AT_RECURSIVE);
     if (root_descriptor < 0)
         return -1;
 
@@ -579,16 +577,36 @@ static int enter_with_open_tree(void)
                 MOVE_MOUNT_F_EMPTY_PATH) != 0)
     {
         int saved_errno = errno;
-        (void)close(root_descriptor);
+        close(root_descriptor);
         errno = saved_errno;
         return -1;
     }
+
+    /* Switch cwd to the new mount root using the fd */
+    if (fchdir(root_descriptor) != 0)
+    {
+        int saved_errno = errno;
+        close(root_descriptor);
+        errno = saved_errno;
+        return -1;
+    }
+
+    /* Now chroot(".") will set the root to the new mount */
+    if (chroot(".") != 0)
+    {
+        int saved_errno = errno;
+        close(root_descriptor);
+        errno = saved_errno;
+        return -1;
+    }
+
     if (close(root_descriptor) != 0)
         return -1;
 
-    if (chroot(".") != 0)
+    if (chdir("/") != 0)
         return -1;
-    return chdir("/");
+
+    return 0;
 #else
     errno = ENOSYS;
     return -1;
