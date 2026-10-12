@@ -582,7 +582,6 @@ static int enter_with_open_tree(void)
         return -1;
     }
 
-    /* Switch cwd to the new mount root using the fd */
     if (fchdir(root_descriptor) != 0)
     {
         int saved_errno = errno;
@@ -591,7 +590,6 @@ static int enter_with_open_tree(void)
         return -1;
     }
 
-    /* Now chroot(".") will set the root to the new mount */
     if (chroot(".") != 0)
     {
         int saved_errno = errno;
@@ -650,14 +648,18 @@ static int enter_with_move_mount(void)
 {
     char resolved[PATH_MAX];
     if (!realpath(".", resolved))
-    {
         return -1;
-    }
+
     if (mount(resolved, "/", NULL, MS_MOVE, NULL) != 0)
         return -1;
+
+    if (chdir("/") != 0)
+        return -1;
+
     if (chroot(".") != 0)
         return -1;
-    return chdir("/");
+
+    return 0;
 }
 
 int filesystem_enter_root(void)
