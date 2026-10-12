@@ -550,11 +550,16 @@ int filesystem_mount_root(int root_is_readonly)
 static int enter_with_pivot_root(void)
 {
     char old_root[] = ".enter-oldroot-XXXXXX";
+    char resolved[PATH_MAX];
+    if (!realpath(".", resolved))
+    {
+        return -1;
+    }
 
 #ifdef SYS_pivot_root
     if (!mkdtemp(old_root))
         return -1;
-    if (syscall(SYS_pivot_root, ".", old_root) != 0)
+    if (syscall(SYS_pivot_root, resolved, old_root) != 0)
     {
         int saved_errno = errno;
         (void)rmdir(old_root);
@@ -577,7 +582,10 @@ static int enter_with_pivot_root(void)
 static int enter_with_move_mount(void)
 {
     char resolved[PATH_MAX];
-    realpath(".", resolved);
+    if (!realpath(".", resolved))
+    {
+        return -1;
+    }
     if (mount(resolved, "/", NULL, MS_MOVE, NULL) != 0)
         return -1;
     if (chroot(".") != 0)
