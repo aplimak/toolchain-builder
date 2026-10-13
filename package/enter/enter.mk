@@ -10,6 +10,9 @@ ENTER_SITE_METHOD = local
 ENTER_LICENSE = MIT
 ENTER_LICENSE_FILES =
 ENTER_CONF_OPTS = --enable-static --bindir=/ --disable-tests
+ifeq ($(BR2_PACKAGE_LIBSELINUX),y)
+ENTER_DEPENDENCIES += libselinux
+endif
 
 ifeq ($(BR2_PACKAGE_ENTER_RUNTIME_WARNINGS),y)
 ENTER_CONF_OPTS += --enable-runtime-warnings
