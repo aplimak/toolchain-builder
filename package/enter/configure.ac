@@ -68,6 +68,9 @@ AC_CHECK_FUNCS([
     strrchr
     strstr
     ftruncate
+    fopen
+    fgets
+    fclose
 ], [], [AC_MSG_ERROR([a required Linux system function is missing])])
 
 AC_FUNC_MALLOC

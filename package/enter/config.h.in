@@ -18,8 +18,17 @@
 /* Define to 1 if you have the 'fchdir' function. */
 #undef HAVE_FCHDIR
 
+/* Define to 1 if you have the 'fclose' function. */
+#undef HAVE_FCLOSE
+
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
+
+/* Define to 1 if you have the 'fgets' function. */
+#undef HAVE_FGETS
+
+/* Define to 1 if you have the 'fopen' function. */
+#undef HAVE_FOPEN
 
 /* Define to 1 if you have the 'fork' function. */
 #undef HAVE_FORK

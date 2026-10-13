@@ -150,7 +150,7 @@ static int create_ext4_image(const char *path, off_t size_bytes, int *out_fd)
     }
     *out_fd = fd;
 
-    char *arguments[] = {"mke2fs", "-t", "ext4", "-F", "-q", path, NULL};
+    char *arguments[] = {"mke2fs", "-t", "ext4", "-F", "-q", "-I", "256", path, (char *)NULL};
     return process_run_program("mke2fs", arguments, 0);
 }
 
@@ -209,6 +209,28 @@ static int open_loop_device(int num, char *out_path, size_t out_size)
     return -1;
 }
 #endif
+
+/* Returns 1 if overlayfs is supported, 0 if not. */
+static int overlayfs_is_supported(void)
+{
+    FILE *fp = fopen("/proc/filesystems", "r");
+    char line[256];
+
+    if (!fp)
+        return 0;
+
+    while (fgets(line, sizeof line, fp))
+    {
+        /* Lines look like "nodev\toverlay" or "nodev\toverlayfs". */
+        if (strstr(line, "overlay"))
+        {
+            fclose(fp);
+            return 1;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
 
 static int mount_overlay_root(void)
 {
@@ -784,11 +806,11 @@ int filesystem_is_readonly(void)
 
 int filesystem_mount_root(int root_is_readonly)
 {
-    if (root_is_readonly && mount_overlay_root() == 0)
+    if (root_is_readonly && overlayfs_is_supported() && mount_overlay_root() == 0)
         return 0;
     if (root_is_readonly)
         diagnostic(DIAGNOSTIC_WARNING,
-                   "read-only rootfs will be used without a writable overlay");
+                   "rootfs is read-only and overlay is not avaiable");
 
     if (mount_filesystem(".", ".", NULL, MS_BIND, NULL) != 0)
     {
