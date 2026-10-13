@@ -33,7 +33,18 @@ AC_CHECK_HEADERS([
     unistd.h
 ], [], [AC_MSG_ERROR([a required Linux system header is missing])])
 
+AC_CHECK_HEADERS([selinux/selinux.h sys/xattr.h linux/loop.h], [], [], [])
+AC_CHECK_LIB([selinux], [setfscreatecon],
+             [AC_DEFINE([HAVE_LIBSELINUX], [1],
+                        [Define if libselinux is available])],
+             [],
+             [])
+
+AC_CHECK_FUNCS([setfscreatecon fsetxattr])
+AC_SEARCH_LIBS([setfscreatecon], [selinux])
+
 AC_TYPE_UID_T
+AC_TYPE_OFF_T
 AC_TYPE_MODE_T
 AC_TYPE_PID_T
 AC_TYPE_SIZE_T
@@ -61,6 +72,7 @@ AC_CHECK_FUNCS([
     strerror
     strrchr
     strstr
+    ftruncate
 ], [], [AC_MSG_ERROR([a required Linux system function is missing])])
 
 AC_FUNC_MALLOC

@@ -5,9 +5,11 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
 #include "filesystem.h"
 
 #include "diagnostics.h"
+#include "process.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -21,6 +23,18 @@
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
+#ifdef HAVE_SELINUX_SELINUX_H
+#include <selinux/selinux.h>
+#endif
+#ifdef HAVE_SYS_XATTR_H
+#include <sys/xattr.h>
+#endif
+#ifdef HAVE_LINUX_LOOP_H
+#include <linux/loop.h>
+#define USE_LOOP 1
+#else
+#define USE_LOOP 0
+#endif
 
 #ifndef OPEN_TREE_CLONE
 #define OPEN_TREE_CLONE 1
@@ -40,6 +54,17 @@
 
 static const char *const login_paths[] = {
     "/bin/login", "/usr/bin/login", "/sbin/login", "/usr/sbin/login", NULL};
+
+int set_selinux_label(int fd, const char *ctx)
+{
+#if defined(HAVE_SYS_XATTR_H) && defined(HAVE_FSETXATTR)
+    return fsetxattr(fd, "security.selinux", ctx, strlen(ctx) + 1, 0);
+#else
+    (void)fd;
+    (void)ctx;
+    return 0; /* no‑op on platforms without SELinux */
+#endif
+}
 
 static int format_root_path(char *path, size_t path_size, const char *root,
                             const char *relative_path)
@@ -77,6 +102,52 @@ static int mount_filesystem(const char *source, const char *target,
     return mount(source, target, type, flags, options);
 }
 
+static int filesystem_supports_xattrs(const char *dir)
+{
+#if defined(HAVE_SYS_XATTR_H) && defined(HAVE_FSETXATTR)
+    char path[256];
+    snprintf(path, sizeof path, "%s/.xattr_test_%d", dir, getpid());
+
+    int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fd < 0)
+        return -1;
+
+    const char *name = "trusted.overlay.test";
+    const char *value = "1";
+    int rc = fsetxattr(fd, name, value, strlen(value), 0);
+    int saved_errno = errno;
+
+    close(fd);
+    unlink(path);
+
+    errno = saved_errno;
+    if (rc == 0)
+        return 1; /* supported */
+    if (errno == ENOTSUP || errno == EOPNOTSUPP)
+        return 0; /* not supported */
+    return -1;    /* other error (e.g. EPERM) */
+#else
+    return 1; /* We cant check so we just say supported */
+#endif
+}
+
+static int create_ext4_image(const char *path, off_t size_bytes, int *out_fd)
+{
+    int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fd < 0)
+        return -1;
+    if (ftruncate(fd, size_bytes) < 0)
+    {
+        close(fd);
+        unlink(path);
+        return -1;
+    }
+    *out_fd = fd;
+
+    char *arguments[] = {"mke2fs", "-t", "ext4", "-F", "-q", path, NULL};
+    return process_run_program("mke2fs", arguments, 0);
+}
+
 static int mount_overlay_root(void)
 {
     char options[PATH_MAX];
@@ -89,11 +160,117 @@ static int mount_overlay_root(void)
         return -1;
     }
 
+    int inner_mount = 0;
+    int rc = filesystem_supports_xattrs("./tmp");
+    if (USE_LOOP && rc <= 0)
+    {
+        if (rc < 0)
+            diagnostic_errno(DIAGNOSTIC_WARNING, "xattr probe failed");
+        else
+            diagnostic(DIAGNOSTIC_WARNING, "tmpfs does not support xattrs");
+
+        static const char *const IMG_CTX = "u:object_r:media_rw_data_file:s0";
+        static const char *const IMG_PATH = "./tmp/overlay.img";
+        static const off_t IMG_SIZE = 256L * 1024 * 1024;
+#if defined(HAVE_SELINUX_SELINUX_H) && defined(HAVE_SETFSCREATECON)
+        if (setfscreatecon(IMG_CTX) != 0)
+            diagnostic_errno(DIAGNOSTIC_WARNING, "setfscreatecon");
+#endif
+        int fd = -1;
+        rc = create_ext4_image(IMG_PATH, IMG_SIZE, &fd);
+        if (rc != 0)
+        {
+            if (rc < 0)
+                diagnostic_errno(DIAGNOSTIC_WARNING, "create ext4 image error");
+            else
+                diagnostic(DIAGNOSTIC_WARNING,
+                           "cannot create ext4 image (mke2fs status %d)", rc);
+            if (fd != -1)
+                close(fd);
+#if defined(HAVE_SELINUX_SELINUX_H) && defined(HAVE_SETFSCREATECON)
+            setfscreatecon(NULL);
+#endif
+            (void)umount2("./tmp", MNT_DETACH);
+            return -1;
+        }
+
+#if defined(HAVE_SELINUX_SELINUX_H) && defined(HAVE_SETFSCREATECON)
+        setfscreatecon(NULL);
+#else
+        if (set_selinux_label(fd, IMG_CTX) != 0)
+            diagnostic_errno(DIAGNOSTIC_WARNING,
+                             "cannot label ext4 image; loop mount may be denied");
+#endif
+
+#ifdef HAVE_LINUX_LOOP_H
+        int lc = open("/dev/loop-control", O_RDWR | O_CLOEXEC);
+        if (lc < 0)
+        {
+            diagnostic_errno(DIAGNOSTIC_WARNING, "can't open /dev/loop-control");
+            (void)umount2("./tmp", MNT_DETACH);
+            close(fd);
+            return -1;
+        }
+        int num = ioctl(lc, LOOP_CTL_GET_FREE);
+        close(lc);
+        if (num < 0)
+        {
+            diagnostic_errno(DIAGNOSTIC_WARNING, "can't allocate loop device");
+            (void)umount2("./tmp", MNT_DETACH);
+            close(fd);
+            return -1;
+        }
+        char loopdev[32];
+        snprintf(loopdev, sizeof loopdev, "/dev/loop%d", num);
+        int lfd = open(loopdev, O_RDWR | O_CLOEXEC);
+        if (lfd < 0)
+        {
+            diagnostic_errno(DIAGNOSTIC_WARNING, "can't open loop device");
+            (void)umount2("./tmp", MNT_DETACH);
+            close(fd);
+            return -1;
+        }
+        if (ioctl(lfd, LOOP_SET_FD, fd) != 0)
+        {
+            diagnostic_errno(DIAGNOSTIC_WARNING, "can't setup loop device");
+            close(lfd);
+            close(fd);
+            (void)umount2("./tmp", MNT_DETACH);
+            return -1;
+        }
+        close(fd);
+
+        struct loop_info64 info = {0};
+        info.lo_flags = LO_FLAGS_AUTOCLEAR;
+        if (ioctl(lfd, LOOP_SET_STATUS64, &info) != 0)
+        {
+            diagnostic_errno(DIAGNOSTIC_WARNING, "can't set loop device auto clear");
+            ioctl(lfd, LOOP_CLR_FD, 0);
+            close(lfd);
+            (void)umount2("./tmp", MNT_DETACH);
+            return -1;
+        }
+
+        if (mount_filesystem(loopdev, "./tmp", "ext4", MS_NOSUID | MS_NODEV, NULL) < 0)
+        {
+            diagnostic_errno(DIAGNOSTIC_WARNING, "cannot mount ext4 writable overlay");
+            ioctl(lfd, LOOP_CLR_FD, 0);
+            close(lfd);
+            (void)umount2("./tmp", MNT_DETACH);
+            return -1;
+        }
+        close(lfd);
+#endif
+        inner_mount = 1;
+    }
+
     if (ensure_directory("./tmp/upper", 0755) != 0 ||
         ensure_directory("./tmp/work", 0755) != 0 ||
         ensure_directory("./tmp/overlay", 0755) != 0)
     {
         diagnostic_errno(DIAGNOSTIC_WARNING, "cannot prepare OverlayFS directories");
+        if (inner_mount)
+            (void)umount2("./tmp", MNT_DETACH);
         (void)umount2("./tmp", MNT_DETACH);
         return -1;
     }
@@ -103,6 +280,8 @@ static int mount_overlay_root(void)
     if (length < 0 || (size_t)length >= sizeof(options))
     {
         errno = ENAMETOOLONG;
+        if (inner_mount)
+            (void)umount2("./tmp", MNT_DETACH);
         (void)umount2("./tmp", MNT_DETACH);
         return -1;
     }
@@ -111,6 +290,8 @@ static int mount_overlay_root(void)
                          MS_NOSUID | MS_NODEV, options) != 0)
     {
         diagnostic_errno(DIAGNOSTIC_WARNING, "OverlayFS unavailable");
+        if (inner_mount)
+            (void)umount2("./tmp", MNT_DETACH);
         (void)umount2("./tmp", MNT_DETACH);
         return -1;
     }
@@ -119,6 +300,8 @@ static int mount_overlay_root(void)
     {
         diagnostic_errno(DIAGNOSTIC_WARNING, "cannot use OverlayFS root");
         (void)umount2("./tmp/overlay", MNT_DETACH);
+        if (inner_mount)
+            (void)umount2("./tmp", MNT_DETACH);
         (void)umount2("./tmp", MNT_DETACH);
         return -1;
     }
