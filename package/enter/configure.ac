@@ -33,19 +33,6 @@ AC_CHECK_HEADERS([
     unistd.h
 ], [], [AC_MSG_ERROR([a required Linux system header is missing])])
 
-AC_CHECK_HEADERS([selinux/selinux.h sys/xattr.h linux/loop.h time.h], [], [], [])
-
-AC_SEARCH_LIBS([setfscreatecon], [selinux])
-AC_CHECK_FUNCS([setfscreatecon fsetxattr clock_gettime])
-
-AC_TYPE_UID_T
-AC_TYPE_OFF_T
-AC_TYPE_MODE_T
-AC_TYPE_PID_T
-AC_TYPE_SIZE_T
-AC_TYPE_SSIZE_T
-AC_CHECK_MEMBERS([struct stat.st_rdev])
-
 AC_CHECK_FUNCS([
     clearenv
     setresgid
@@ -73,10 +60,53 @@ AC_CHECK_FUNCS([
     fclose
 ], [], [AC_MSG_ERROR([a required Linux system function is missing])])
 
+AC_TYPE_UID_T
+AC_TYPE_OFF_T
+AC_TYPE_MODE_T
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_CHECK_MEMBERS([struct stat.st_rdev])
+
 AC_FUNC_MALLOC
 AC_FUNC_FORK
 AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
 AC_HEADER_MAJOR
+
+AC_CHECK_HEADERS([selinux/selinux.h sys/xattr.h linux/loop.h time.h], [], [], [])
+AC_SEARCH_LIBS([setfscreatecon], [selinux])
+AC_CHECK_FUNCS([setfscreatecon fsetxattr clock_gettime])
+
+dnl --- Feature: ext4-on-loop fallback for read-only overlayfs --------
+dnl Needs the xattr probe, loop devices, and monotonic time.
+AS_IF([test "x$ac_cv_header_sys_xattr_h"   = "xyes" && \
+       test "x$ac_cv_func_fsetxattr"       = "xyes" && \
+       test "x$ac_cv_header_linux_loop_h"  = "xyes" && \
+       test "x$ac_cv_header_time_h"        = "xyes" && \
+       test "x$ac_cv_func_clock_gettime"   = "xyes"],
+      [AC_DEFINE([FEATURE_IMAGE_OVERLAY], [1],
+                 [Enable ext4-on-loop fallback for read-only overlayfs])],
+      [AC_DEFINE([FEATURE_IMAGE_OVERLAY], [0],
+                 [Enable ext4-on-loop fallback for read-only overlayfs])])
+
+dnl --- Feature: SELinux label integration ----------------------------
+dnl Two backends.  libselinux uses setfscreatecon(); the xattr
+dnl fallback uses fsetxattr("security.selinux").  Either one enables
+dnl the feature.  HAVE_LIBSELINUX records which backend is preferred.
+AS_IF([test "x$ac_cv_header_selinux_selinux_h" = "xyes" && \
+       test "x$ac_cv_func_setfscreatecon"      = "xyes"],
+      [AC_DEFINE([HAVE_LIBSELINUX], [1],
+                 [Use libselinux setfscreatecon for labeling])])
+
+enter_enable_selinux=no
+AS_IF([test "x$ac_cv_header_selinux_selinux_h" = "xyes" && \
+       test "x$ac_cv_func_setfscreatecon"      = "xyes"],
+      [enter_enable_selinux=yes])
+AS_IF([test "x$enter_enable_selinux" = "xyes"],
+      [AC_DEFINE([ENABLE_SELINUX], [1],
+                 [Enable SELinux label integration])],
+      [AC_DEFINE([ENABLE_SELINUX], [0],
+                 [Enable SELinux label integration])])
 
 AC_ARG_ENABLE(
     [runtime-warnings],

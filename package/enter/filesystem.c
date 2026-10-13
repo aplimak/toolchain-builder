@@ -23,23 +23,13 @@
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
-#ifdef HAVE_SELINUX_SELINUX_H
+#ifdef FEATURE_IMAGE_OVERLAY
+#include <linux/loop.h>
+#include <sys/xattr.h>
+#include <time.h>
+#ifdef HAVE_LIBSELINUX
 #include <selinux/selinux.h>
 #endif
-#ifdef HAVE_SYS_XATTR_H
-#include <sys/xattr.h>
-#endif
-#ifdef HAVE_LINUX_LOOP_H
-#include <linux/loop.h>
-#define USE_LOOP 1
-#else
-#define USE_LOOP 0
-#endif
-#ifdef HAVE_TIME_H
-#include <time.h>
-#define USE_TIME 1
-#else
-#define USE_TIME 0
 #endif
 
 #ifndef OPEN_TREE_CLONE
@@ -60,17 +50,6 @@
 
 static const char *const login_paths[] = {
     "/bin/login", "/usr/bin/login", "/sbin/login", "/usr/sbin/login", NULL};
-
-int set_selinux_label(int fd, const char *ctx)
-{
-#if defined(HAVE_SYS_XATTR_H) && defined(HAVE_FSETXATTR)
-    return fsetxattr(fd, "security.selinux", ctx, strlen(ctx) + 1, 0);
-#else
-    (void)fd;
-    (void)ctx;
-    return 0; /* no‑op on platforms without SELinux */
-#endif
-}
 
 static int format_root_path(char *path, size_t path_size, const char *root,
                             const char *relative_path)
@@ -110,7 +89,6 @@ static int mount_filesystem(const char *source, const char *target,
 
 static int filesystem_supports_xattrs(const char *dir)
 {
-#if defined(HAVE_SYS_XATTR_H) && defined(HAVE_FSETXATTR)
     char path[256];
     snprintf(path, sizeof path, "%s/.xattr_test_%d", dir, getpid());
 
@@ -132,9 +110,6 @@ static int filesystem_supports_xattrs(const char *dir)
     if (errno == ENOTSUP || errno == EOPNOTSUPP)
         return 0; /* not supported */
     return -1;    /* other error (e.g. EPERM) */
-#else
-    return 1; /* We cant check so we just say supported */
-#endif
 }
 
 static int create_ext4_image(const char *path, off_t size_bytes, int *out_fd)
@@ -150,17 +125,17 @@ static int create_ext4_image(const char *path, off_t size_bytes, int *out_fd)
     }
     *out_fd = fd;
 
-    char *arguments[] = {"mke2fs", "-t", "ext4", "-F", "-q", "-I", "256", path, (char *)NULL};
+    char *arguments[] = {"mke2fs", "-t", "ext4", "-F", "-q", "-I", "256", (char *)path, NULL};
     return process_run_program("mke2fs", arguments, 0);
 }
 
-#ifdef HAVE_TIME_H
+#ifdef FEATURE_IMAGE_OVERLAY
 static int open_loop_device(int num, char *out_path, size_t out_size)
 {
-    static const char *const fmt[] = {
-        "/dev/loop%d",
-        "/dev/block/loop%d",
-        "/dev/loop/%d",
+    static const char *const prefixes[] = {
+        "/dev/loop",
+        "/dev/block/loop",
+        "/dev/loop/",
         NULL};
     char path[64];
     int i;
@@ -176,9 +151,9 @@ static int open_loop_device(int num, char *out_path, size_t out_size)
 
     for (;;)
     {
-        for (i = 0; fmt[i]; i++)
+        for (i = 0; prefixes[i]; i++)
         {
-            snprintf(path, sizeof(path), fmt[i], num);
+            snprintf(path, sizeof(path), "%s%d", prefixes[i], num);
             int fd = open(path, O_RDWR | O_CLOEXEC);
             if (fd >= 0)
             {
@@ -245,8 +220,9 @@ static int mount_overlay_root(void)
     }
 
     int inner_mount = 0;
+#ifdef FEATURE_IMAGE_OVERLAY
     int rc = filesystem_supports_xattrs("./tmp");
-    if (USE_LOOP && USE_TIME && rc <= 0)
+    if (rc <= 0)
     {
         if (rc < 0)
             diagnostic_errno(DIAGNOSTIC_WARNING, "xattr probe failed");
@@ -256,7 +232,7 @@ static int mount_overlay_root(void)
         static const char *const IMG_CTX = "u:object_r:media_rw_data_file:s0";
         static const char *const IMG_PATH = "./tmp/overlay.img";
         static const off_t IMG_SIZE = 256L * 1024 * 1024;
-#if defined(HAVE_SELINUX_SELINUX_H) && defined(HAVE_SETFSCREATECON)
+#if HAVE_LIBSELINUX
         if (setfscreatecon(IMG_CTX) != 0)
             diagnostic_errno(DIAGNOSTIC_WARNING, "setfscreatecon");
 #endif
@@ -271,22 +247,21 @@ static int mount_overlay_root(void)
                            "cannot create ext4 image (mke2fs status %d)", rc);
             if (fd != -1)
                 close(fd);
-#if defined(HAVE_SELINUX_SELINUX_H) && defined(HAVE_SETFSCREATECON)
+#if HAVE_LIBSELINUX
             setfscreatecon(NULL);
 #endif
             (void)umount2("./tmp", MNT_DETACH);
             return -1;
         }
 
-#if defined(HAVE_SELINUX_SELINUX_H) && defined(HAVE_SETFSCREATECON)
+#if HAVE_LIBSELINUX
         setfscreatecon(NULL);
 #else
-        if (set_selinux_label(fd, IMG_CTX) != 0)
+        if (fsetxattr(fd, "security.selinux", IMG_CTX, strlen(IMG_CTX) + 1, 0) != 0)
             diagnostic_errno(DIAGNOSTIC_WARNING,
                              "cannot label ext4 image; loop mount may be denied");
 #endif
 
-#ifdef HAVE_LINUX_LOOP_H
         int lc = open("/dev/loop-control", O_RDWR | O_CLOEXEC);
         if (lc < 0)
         {
@@ -343,9 +318,9 @@ static int mount_overlay_root(void)
             return -1;
         }
         close(lfd);
-#endif
         inner_mount = 1;
     }
+#endif
 
     if (ensure_directory("./tmp/upper", 0755) != 0 ||
         ensure_directory("./tmp/work", 0755) != 0 ||

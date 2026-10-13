@@ -6309,118 +6309,23 @@ fi
 
 done
 
-ac_fn_c_check_header_compile "$LINENO" "selinux/selinux.h" "ac_cv_header_selinux_selinux_h" "$ac_includes_default"
-if test "x$ac_cv_header_selinux_selinux_h" = xyes
+
+  for ac_func in clearenv setresgid setresuid unshare alarm dup2 fchdir memmove memset mkdir realpath rmdir setenv sethostname strchr strcspn strdup strerror strrchr strstr ftruncate fopen fgets fclose
+do :
+  as_ac_var=`printf '%s\n' "ac_cv_func_$ac_func" | sed "$as_sed_sh"`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"
 then :
-  printf '%s\n' "#define HAVE_SELINUX_SELINUX_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/xattr.h" "ac_cv_header_sys_xattr_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_xattr_h" = xyes
-then :
-  printf '%s\n' "#define HAVE_SYS_XATTR_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "linux/loop.h" "ac_cv_header_linux_loop_h" "$ac_includes_default"
-if test "x$ac_cv_header_linux_loop_h" = xyes
-then :
-  printf '%s\n' "#define HAVE_LINUX_LOOP_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "time.h" "ac_cv_header_time_h" "$ac_includes_default"
-if test "x$ac_cv_header_time_h" = xyes
-then :
-  printf '%s\n' "#define HAVE_TIME_H 1" >>confdefs.h
-
-fi
-
-
-{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for library containing setfscreatecon" >&5
-printf %s "checking for library containing setfscreatecon... " >&6; }
-if test ${ac_cv_search_setfscreatecon+y}
-then :
-  printf %s "(cached) " >&6
-else case e in #(
-  e) ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.
-   The 'extern "C"' is for builds by C++ compilers;
-   although this is not generally supported in C code supporting it here
-   has little cost and some practical benefit (sr 110532).  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char setfscreatecon (void);
-int
-main (void)
-{
-return setfscreatecon ();
-  ;
-  return 0;
-}
+  cat >>confdefs.h <<_ACEOF
+#define `printf '%s\n' "HAVE_$ac_func" | sed "$as_sed_cpp"` 1
 _ACEOF
-for ac_lib in '' selinux
-do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_setfscreatecon=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext
-  if test ${ac_cv_search_setfscreatecon+y}
-then :
-  break
-fi
-done
-if test ${ac_cv_search_setfscreatecon+y}
-then :
 
 else case e in #(
-  e) ac_cv_search_setfscreatecon=no ;;
+  e) as_fn_error $? "a required Linux system function is missing" "$LINENO" 5 ;;
 esac
 fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS ;;
-esac
-fi
-{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_setfscreatecon" >&5
-printf '%s\n' "$ac_cv_search_setfscreatecon" >&6; }
-ac_res=$ac_cv_search_setfscreatecon
-if test "$ac_res" != no
-then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
-fi
-
-ac_fn_c_check_func "$LINENO" "setfscreatecon" "ac_cv_func_setfscreatecon"
-if test "x$ac_cv_func_setfscreatecon" = xyes
-then :
-  printf '%s\n' "#define HAVE_SETFSCREATECON 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "fsetxattr" "ac_cv_func_fsetxattr"
-if test "x$ac_cv_func_fsetxattr" = xyes
-then :
-  printf '%s\n' "#define HAVE_FSETXATTR 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "clock_gettime" "ac_cv_func_clock_gettime"
-if test "x$ac_cv_func_clock_gettime" = xyes
-then :
-  printf '%s\n' "#define HAVE_CLOCK_GETTIME 1" >>confdefs.h
-
-fi
-
+done
 
 ac_fn_c_check_type "$LINENO" "uid_t" "ac_cv_type_uid_t" "$ac_includes_default"
 if test "x$ac_cv_type_uid_t" = xyes
@@ -6536,24 +6441,6 @@ printf '%s\n' "#define HAVE_STRUCT_STAT_ST_RDEV 1" >>confdefs.h
 
 fi
 
-
-
-  for ac_func in clearenv setresgid setresuid unshare alarm dup2 fchdir memmove memset mkdir realpath rmdir setenv sethostname strchr strcspn strdup strerror strrchr strstr ftruncate fopen fgets fclose
-do :
-  as_ac_var=`printf '%s\n' "ac_cv_func_$ac_func" | sed "$as_sed_sh"`
-ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
-if eval test \"x\$"$as_ac_var"\" = x"yes"
-then :
-  cat >>confdefs.h <<_ACEOF
-#define `printf '%s\n' "HAVE_$ac_func" | sed "$as_sed_cpp"` 1
-_ACEOF
-
-else case e in #(
-  e) as_fn_error $? "a required Linux system function is missing" "$LINENO" 5 ;;
-esac
-fi
-
-done
 
 
 
@@ -7030,6 +6917,160 @@ fi
 
 fi
 
+
+ac_fn_c_check_header_compile "$LINENO" "selinux/selinux.h" "ac_cv_header_selinux_selinux_h" "$ac_includes_default"
+if test "x$ac_cv_header_selinux_selinux_h" = xyes
+then :
+  printf '%s\n' "#define HAVE_SELINUX_SELINUX_H 1" >>confdefs.h
+
+fi
+ac_fn_c_check_header_compile "$LINENO" "sys/xattr.h" "ac_cv_header_sys_xattr_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_xattr_h" = xyes
+then :
+  printf '%s\n' "#define HAVE_SYS_XATTR_H 1" >>confdefs.h
+
+fi
+ac_fn_c_check_header_compile "$LINENO" "linux/loop.h" "ac_cv_header_linux_loop_h" "$ac_includes_default"
+if test "x$ac_cv_header_linux_loop_h" = xyes
+then :
+  printf '%s\n' "#define HAVE_LINUX_LOOP_H 1" >>confdefs.h
+
+fi
+ac_fn_c_check_header_compile "$LINENO" "time.h" "ac_cv_header_time_h" "$ac_includes_default"
+if test "x$ac_cv_header_time_h" = xyes
+then :
+  printf '%s\n' "#define HAVE_TIME_H 1" >>confdefs.h
+
+fi
+
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for library containing setfscreatecon" >&5
+printf %s "checking for library containing setfscreatecon... " >&6; }
+if test ${ac_cv_search_setfscreatecon+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.
+   The 'extern "C"' is for builds by C++ compilers;
+   although this is not generally supported in C code supporting it here
+   has little cost and some practical benefit (sr 110532).  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char setfscreatecon (void);
+int
+main (void)
+{
+return setfscreatecon ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' selinux
+do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_setfscreatecon=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext
+  if test ${ac_cv_search_setfscreatecon+y}
+then :
+  break
+fi
+done
+if test ${ac_cv_search_setfscreatecon+y}
+then :
+
+else case e in #(
+  e) ac_cv_search_setfscreatecon=no ;;
+esac
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS ;;
+esac
+fi
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_setfscreatecon" >&5
+printf '%s\n' "$ac_cv_search_setfscreatecon" >&6; }
+ac_res=$ac_cv_search_setfscreatecon
+if test "$ac_res" != no
+then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+ac_fn_c_check_func "$LINENO" "setfscreatecon" "ac_cv_func_setfscreatecon"
+if test "x$ac_cv_func_setfscreatecon" = xyes
+then :
+  printf '%s\n' "#define HAVE_SETFSCREATECON 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "fsetxattr" "ac_cv_func_fsetxattr"
+if test "x$ac_cv_func_fsetxattr" = xyes
+then :
+  printf '%s\n' "#define HAVE_FSETXATTR 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "clock_gettime" "ac_cv_func_clock_gettime"
+if test "x$ac_cv_func_clock_gettime" = xyes
+then :
+  printf '%s\n' "#define HAVE_CLOCK_GETTIME 1" >>confdefs.h
+
+fi
+
+
+if test "x$ac_cv_header_sys_xattr_h"   = "xyes" && \
+       test "x$ac_cv_func_fsetxattr"       = "xyes" && \
+       test "x$ac_cv_header_linux_loop_h"  = "xyes" && \
+       test "x$ac_cv_header_time_h"        = "xyes" && \
+       test "x$ac_cv_func_clock_gettime"   = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 1" >>confdefs.h
+
+else case e in #(
+  e)
+printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 0" >>confdefs.h
+ ;;
+esac
+fi
+
+if test "x$ac_cv_header_selinux_selinux_h" = "xyes" && \
+       test "x$ac_cv_func_setfscreatecon"      = "xyes"
+then :
+
+printf '%s\n' "#define HAVE_LIBSELINUX 1" >>confdefs.h
+
+fi
+
+enter_enable_selinux=no
+if test "x$ac_cv_header_selinux_selinux_h" = "xyes" && \
+       test "x$ac_cv_func_setfscreatecon"      = "xyes"
+then :
+  enter_enable_selinux=yes
+fi
+if test "x$enter_enable_selinux" = "xyes"
+then :
+
+printf '%s\n' "#define ENABLE_SELINUX 1" >>confdefs.h
+
+else case e in #(
+  e)
+printf '%s\n' "#define ENABLE_SELINUX 0" >>confdefs.h
+ ;;
+esac
+fi
 
 # Check whether --enable-runtime-warnings was given.
 if test ${enable_runtime_warnings+y}

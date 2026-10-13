@@ -3,6 +3,12 @@
 /* Emit recoverable runtime warning messages */
 #undef ENABLE_RUNTIME_WARNINGS
 
+/* Enable SELinux label integration */
+#undef ENABLE_SELINUX
+
+/* Enable ext4-on-loop fallback for read-only overlayfs */
+#undef FEATURE_IMAGE_OVERLAY
+
 /* Define to 1 if you have the 'alarm' function. */
 #undef HAVE_ALARM
 
@@ -41,6 +47,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Use libselinux setfscreatecon for labeling */
+#undef HAVE_LIBSELINUX
 
 /* Define to 1 if you have the <linux/loop.h> header file. */
 #undef HAVE_LINUX_LOOP_H
