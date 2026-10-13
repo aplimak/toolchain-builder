@@ -33,15 +33,10 @@ AC_CHECK_HEADERS([
     unistd.h
 ], [], [AC_MSG_ERROR([a required Linux system header is missing])])
 
-AC_CHECK_HEADERS([selinux/selinux.h sys/xattr.h linux/loop.h], [], [], [])
-AC_CHECK_LIB([selinux], [setfscreatecon],
-             [AC_DEFINE([HAVE_LIBSELINUX], [1],
-                        [Define if libselinux is available])],
-             [],
-             [])
+AC_CHECK_HEADERS([selinux/selinux.h sys/xattr.h linux/loop.h time.h], [], [], [])
 
-AC_CHECK_FUNCS([setfscreatecon fsetxattr])
 AC_SEARCH_LIBS([setfscreatecon], [selinux])
+AC_CHECK_FUNCS([setfscreatecon fsetxattr clock_gettime])
 
 AC_TYPE_UID_T
 AC_TYPE_OFF_T

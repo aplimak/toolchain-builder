@@ -35,6 +35,12 @@
 #else
 #define USE_LOOP 0
 #endif
+#ifdef HAVE_TIME_H
+#include <time.h>
+#define USE_TIME 1
+#else
+#define USE_TIME 0
+#endif
 
 #ifndef OPEN_TREE_CLONE
 #define OPEN_TREE_CLONE 1
@@ -148,6 +154,62 @@ static int create_ext4_image(const char *path, off_t size_bytes, int *out_fd)
     return process_run_program("mke2fs", arguments, 0);
 }
 
+#ifdef HAVE_TIME_H
+static int open_loop_device(int num, char *out_path, size_t out_size)
+{
+    static const char *const fmt[] = {
+        "/dev/loop%d",
+        "/dev/block/loop%d",
+        "/dev/loop/%d",
+        NULL};
+    char path[64];
+    int i;
+    long long deadline_ms = 5000; /* 5 s, toybox's empirical value */
+    long long start_ms;
+
+    /* Get a monotonic start time. */
+    {
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        start_ms = (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    }
+
+    for (;;)
+    {
+        for (i = 0; fmt[i]; i++)
+        {
+            snprintf(path, sizeof(path), fmt[i], num);
+            int fd = open(path, O_RDWR | O_CLOEXEC);
+            if (fd >= 0)
+            {
+                snprintf(out_path, out_size, "%s", path);
+                return fd;
+            }
+            /* ENOENT: keep trying other variants / wait for ueventd.
+               Any other errno: the node exists but we can't use it. */
+            if (errno != ENOENT)
+                return -1;
+        }
+
+        /* All variants missing so far.  Wait and retry if we still have time. */
+        {
+            struct timespec now;
+            long long now_ms;
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            now_ms = (long long)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+            if (now_ms - start_ms >= deadline_ms)
+                break;
+
+            struct timespec sleep = {0, 20 * 1000 * 1000}; /* 20 ms */
+            nanosleep(&sleep, NULL);
+        }
+    }
+
+    errno = ENOENT;
+    return -1;
+}
+#endif
+
 static int mount_overlay_root(void)
 {
     char options[PATH_MAX];
@@ -162,7 +224,7 @@ static int mount_overlay_root(void)
 
     int inner_mount = 0;
     int rc = filesystem_supports_xattrs("./tmp");
-    if (USE_LOOP && rc <= 0)
+    if (USE_LOOP && USE_TIME && rc <= 0)
     {
         if (rc < 0)
             diagnostic_errno(DIAGNOSTIC_WARNING, "xattr probe failed");
@@ -220,9 +282,8 @@ static int mount_overlay_root(void)
             close(fd);
             return -1;
         }
-        char loopdev[32];
-        snprintf(loopdev, sizeof loopdev, "/dev/loop%d", num);
-        int lfd = open(loopdev, O_RDWR | O_CLOEXEC);
+        char loopdev[64];
+        int lfd = open_loop_device(num, loopdev, sizeof loopdev);
         if (lfd < 0)
         {
             diagnostic_errno(DIAGNOSTIC_WARNING, "can't open loop device");
