@@ -23,19 +23,50 @@ AC_ARG_WITH([fop], [], [], [])
 
 AC_CHECK_HEADERS([
     sched.h
-    sys/mount.h
     sys/prctl.h
     sys/syscall.h
     sys/sysmacros.h
+    fcntl.h
+    sys/ioctl.h
+    sys/mount.h
+    termios.h
+    unistd.h
 ], [], [AC_MSG_ERROR([a required Linux system header is missing])])
+
+AC_TYPE_UID_T
+AC_TYPE_MODE_T
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_TYPE_SSIZE_T
+AC_CHECK_MEMBERS([struct stat.st_rdev])
 
 AC_CHECK_FUNCS([
     clearenv
-    sethostname
     setresgid
     setresuid
     unshare
+    alarm
+    dup2
+    fchdir
+    memmove
+    memset
+    mkdir
+    realpath
+    rmdir
+    setenv
+    sethostname
+    strchr
+    strcspn
+    strdup
+    strerror
+    strrchr
+    strstr
 ], [], [AC_MSG_ERROR([a required Linux system function is missing])])
+
+AC_FUNC_MALLOC
+AC_FUNC_FORK
+AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+AC_HEADER_MAJOR
 
 AC_ARG_ENABLE(
     [runtime-warnings],
