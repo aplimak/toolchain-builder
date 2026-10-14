@@ -48,8 +48,8 @@
 #define PATH_MAX 4096
 #endif
 
-static const char *const login_paths[] = {
-    "/bin/login", "/usr/bin/login", "/sbin/login", "/usr/sbin/login", NULL};
+static const char *const search_paths[] = {"bin", "usr/bin", "sbin", "usr/sbin",
+                                           NULL};
 
 static int format_root_path(char *path, size_t path_size, const char *root,
                             const char *relative_path) {
@@ -661,21 +661,23 @@ int filesystem_validate_root(const char *root) {
   return 0;
 }
 
-int filesystem_find_login(const char *root, char *program,
-                          size_t program_size) {
+int filesystem_find_executable(const char *root, const char *executable,
+                               char *out_path, size_t out_psth_size) {
   size_t index;
 
-  for (index = 0; login_paths[index]; index++) {
+  for (index = 0; search_paths[index]; index++) {
     char candidate[PATH_MAX];
     struct stat status;
 
     if (format_root_path(candidate, sizeof(candidate), root,
-                         login_paths[index] + 1) != 0)
+                         search_paths[index] + 1) != 0 ||
+        snprintf(candidate, sizeof(candidate), "%s/%s", candidate,
+                 executable) >= (int)sizeof(candidate))
       continue;
     if (stat(candidate, &status) == 0 && S_ISREG(status.st_mode) &&
         access(candidate, X_OK) == 0) {
-      if (snprintf(program, program_size, "%s", login_paths[index]) >=
-          (int)program_size) {
+      if (snprintf(out_path, out_psth_size, "/%s/%s", search_paths[index],
+                   executable) >= (int)out_psth_size) {
         errno = ENAMETOOLONG;
         return -1;
       }
@@ -684,6 +686,11 @@ int filesystem_find_login(const char *root, char *program,
   }
   errno = ENOENT;
   return -1;
+}
+
+int filesystem_find_login(const char *root, char *program,
+                          size_t program_size) {
+  return filesystem_find_executable(root, "login", program, program_size);
 }
 
 int filesystem_is_readonly(void) {
