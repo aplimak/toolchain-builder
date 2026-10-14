@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#include <asm-generic/errno-base.h>
 #endif
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -48,8 +49,8 @@
 #define PATH_MAX 4096
 #endif
 
-static const char *const search_paths[] = {"bin", "usr/bin", "sbin", "usr/sbin",
-                                           NULL};
+static const char *const search_paths[] = {"",     "bin",      "usr/bin",
+                                           "sbin", "usr/sbin", NULL};
 
 static int format_root_path(char *path, size_t path_size, const char *root,
                             const char *relative_path) {
@@ -662,7 +663,29 @@ int filesystem_validate_root(const char *root) {
 }
 
 int filesystem_find_executable(const char *root, const char *executable,
-                               char *out_path, size_t out_psth_size) {
+                               char *out_path, size_t out_path_size) {
+
+  if (strchr(executable, '/') != NULL) {
+    char path[PATH_MAX];
+    struct stat status;
+
+    if (format_root_path(path, sizeof(path), root, executable) != 0) {
+      errno = ENAMETOOLONG;
+      return -1;
+    }
+    if (stat(path, &status) == 0 && S_ISREG(status.st_mode) &&
+        access(path, X_OK) == 0) {
+      if (snprintf(out_path, out_path_size, "%s", executable) >=
+          (int)out_path_size) {
+        errno = ENAMETOOLONG;
+        return -1;
+      }
+      return 0;
+    }
+    errno = ENOENT;
+    return -1;
+  }
+
   size_t index;
 
   for (index = 0; search_paths[index]; index++) {
@@ -684,8 +707,8 @@ int filesystem_find_executable(const char *root, const char *executable,
     memcpy(candidate + len + 1, executable, exe_len + 1);
     if (stat(candidate, &status) == 0 && S_ISREG(status.st_mode) &&
         access(candidate, X_OK) == 0) {
-      if (snprintf(out_path, out_psth_size, "/%s/%s", search_paths[index],
-                   executable) >= (int)out_psth_size) {
+      if (snprintf(out_path, out_path_size, "/%s/%s", search_paths[index],
+                   executable) >= (int)out_path_size) {
         errno = ENAMETOOLONG;
         return -1;
       }

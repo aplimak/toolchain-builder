@@ -38,8 +38,7 @@ int main(int argument_count, char *arguments[]) {
   if (argument_count >= 2) {
     if (filesystem_find_executable(root, arguments[1], found_program_path,
                                    sizeof(found_program_path)) != 0) {
-      diagnostic(DIAGNOSTIC_ERROR, "executable %s not found in %s",
-                 arguments[1], root);
+      diagnostic_errno(DIAGNOSTIC_ERROR, "can't find program");
       return 1;
     }
     program = found_program_path;
@@ -47,8 +46,7 @@ int main(int argument_count, char *arguments[]) {
   } else {
     if (filesystem_find_login(root, found_program_path,
                               sizeof(found_program_path)) != 0) {
-      diagnostic(DIAGNOSTIC_ERROR, "no executable login program found in %s",
-                 root);
+      diagnostic_errno(DIAGNOSTIC_ERROR, "can't find login program");
       return 1;
     }
     automatic_arguments[0] = found_program_path;
