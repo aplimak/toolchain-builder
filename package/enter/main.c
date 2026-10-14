@@ -38,8 +38,8 @@ int main(int argument_count, char *arguments[]) {
   if (argument_count >= 2) {
     if (filesystem_find_executable(root, arguments[1], found_program_path,
                                    sizeof(found_program_path)) != 0) {
-      diagnostic(DIAGNOSTIC_ERROR, "executable %s not found in %s", program,
-                 root);
+      diagnostic(DIAGNOSTIC_ERROR, "executable %s not found in %s",
+                 arguments[1], root);
       return 1;
     }
     program = found_program_path;
