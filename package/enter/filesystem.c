@@ -128,7 +128,6 @@ static int filesystem_supports_xattrs(const char *dir) {
     return 0; /* not supported */
   return -1;  /* other error (e.g. EPERM) */
 }
-#endif
 
 static int create_ext4_image(char *mke2fs_path, const char *path,
                              off_t size_bytes, int *out_fd) {
@@ -147,7 +146,6 @@ static int create_ext4_image(char *mke2fs_path, const char *path,
   return process_run_program(mke2fs_path, arguments, 0);
 }
 
-#if FEATURE_IMAGE_OVERLAY
 static int open_loop_device(int num, char *out_path, size_t out_size) {
   static const char *const prefixes[] = {"/dev/loop", "/dev/block/loop",
                                          "/dev/loop/", NULL};

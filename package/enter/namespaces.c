@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#if FEATURE_USER_NAMESPACE && defined(CLONE_NEWUSER)
 static int write_proc_value(const char *path, const char *value) {
   size_t written = 0;
   size_t value_length = strlen(value);
@@ -55,17 +56,18 @@ static int write_proc_value(const char *path, const char *value) {
     return -1;
   return 0;
 }
+#endif
 
 int namespaces_prepare_user(void) {
-  uid_t host_uid;
-  gid_t host_gid;
-  char mapping[64];
-
   if (geteuid() == 0)
     return 0;
 
 #if FEATURE_USER_NAMESPACE
 #if defined(CLONE_NEWUSER)
+  uid_t host_uid;
+  gid_t host_gid;
+  char mapping[64];
+
   host_uid = getuid();
   host_gid = getgid();
   if (unshare(CLONE_NEWUSER) != 0) {
