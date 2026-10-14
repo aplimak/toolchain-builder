@@ -670,10 +670,18 @@ int filesystem_find_executable(const char *root, const char *executable,
     struct stat status;
 
     if (format_root_path(candidate, sizeof(candidate), root,
-                         search_paths[index] + 1) != 0 ||
-        snprintf(candidate, sizeof(candidate), "%s/%s", candidate,
-                 executable) >= (int)sizeof(candidate))
+                         search_paths[index]) != 0)
       continue;
+
+    size_t len = strlen(candidate);
+    size_t exe_len = strlen(executable);
+
+    if (len + 1 + exe_len + 1 > sizeof(candidate)) {
+      continue;
+    }
+
+    candidate[len] = '/';
+    memcpy(candidate + len + 1, executable, exe_len + 1);
     if (stat(candidate, &status) == 0 && S_ISREG(status.st_mode) &&
         access(candidate, X_OK) == 0) {
       if (snprintf(out_path, out_psth_size, "/%s/%s", search_paths[index],
