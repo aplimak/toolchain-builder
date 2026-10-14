@@ -29,4 +29,62 @@ config BR2_PACKAGE_ENTER_RUNTIME_WARNINGS
 	  fallback paths. Errors are always reported. Compiler warning
 	  diagnostics remain enabled regardless of this setting.
 
+config BR2_PACKAGE_ENTER_OVERLAY
+	bool "Enable OverlayFS writable root"
+	default y
+	help
+	  Provide a writable overlay when the rootfs is read-only.
+
+config BR2_PACKAGE_ENTER_IMAGE_OVERLAY
+	bool "ext4 image-backed overlay fallback"
+	default y
+	depends on BR2_PACKAGE_ENTER_OVERLAY
+	help
+	  When overlay-on-tmpfs cannot be used (e.g. no xattrs),
+	  create an ext4 loop image to back upper/work.
+
+config BR2_PACKAGE_ENTER_PTY_RELAY
+	bool "Private PTY relay"
+	default y
+	help
+	  Give the child its own PTY and relay I/O with SIGWINCH handling.
+
+config BR2_PACKAGE_ENTER_USER_NAMESPACE
+	bool "Support user namespace"
+	default y
+	help
+	  Attempt USER namespace if uid != 0
+
+config BR2_PACKAGE_ENTER_PID_NAMESPACE
+	bool "Support pid namespace"
+	default y
+
+config BR2_PACKAGE_ENTER_UTS_NAMESPACE
+	bool "Support uts namespace"
+	default y
+
+config BR2_PACKAGE_ENTER_IPC_NAMESPACE
+	bool "Support ipc namespace"
+	default y
+
+config BR2_PACKAGE_ENTER_OPEN_TREE
+	bool "Use open_tree/move_mount to enter root"
+	default y
+
+config BR2_PACKAGE_ENTER_PIVOT_ROOT
+	bool "Use pivot_root to enter root"
+	default y
+
+config BR2_PACKAGE_ENTER_MOVE_MOUNT
+	bool "Use MS_MOVE + chroot to enter root"
+	default y
+
+config BR2_PACKAGE_ENTER_CHROOT
+	bool "Plain chroot as last resort"
+	default y
+
+config BR2_PACKAGE_ENTER_DEFAULT_RESOLVER
+	bool "Write default /run/resolv.conf"
+	default y
+
 endif

@@ -629,6 +629,15 @@ LTLIBOBJS
 ENTER_STATIC_LDFLAGS
 BUILD_TESTS_FALSE
 BUILD_TESTS_TRUE
+HAVE_LIBSELINUX_FALSE
+HAVE_LIBSELINUX_TRUE
+SELINUX_LIBS
+SELINUX_CFLAGS
+PKG_CONFIG_LIBDIR
+PKG_CONFIG_PATH
+PKG_CONFIG
+enter_macro_FALSE
+enter_macro_TRUE
 LIBOBJS
 host_os
 host_vendor
@@ -747,6 +756,20 @@ enable_shared
 with_xmlto
 with_fop
 enable_runtime_warnings
+enable_overlay
+enable_pty_relay
+enable_user_namespace
+enable_pid_namespace
+enable_uts_namespace
+enable_ipc_namespace
+enable_enter_open_tree
+enable_enter_pivot_root
+enable_enter_move_mount
+enable_enter_chroot
+enable_default_resolver
+enable_image_overlay
+enable_selinux
+enable_binary_trimming
 enable_tests
 enable_static
 '
@@ -757,7 +780,12 @@ CC
 CFLAGS
 LDFLAGS
 LIBS
-CPPFLAGS'
+CPPFLAGS
+PKG_CONFIG
+PKG_CONFIG_PATH
+PKG_CONFIG_LIBDIR
+SELINUX_CFLAGS
+SELINUX_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1397,6 +1425,29 @@ Optional Features:
 
   --disable-runtime-warnings
                           suppress recoverable runtime warning messages
+  --enable-overlay        Support OverlayFS writable root [default=yes]
+  --enable-pty-relay      Private PTY relay with window-size handling
+                          [default=yes]
+  --enable-user-namespace Attempt CLONE_NEWUSER when invoked with UID!=0
+                          [default=yes]
+  --enable-pid-namespace  Attempt CLONE_NEWPID [default=yes]
+  --enable-uts-namespace  Attempt CLONE_NEWUTS [default=yes]
+  --enable-ipc-namespace  Attempt CLONE_NEWIPC [default=yes]
+  --enable-enter-open-tree
+                          Use open_tree/move_mount to enter rootfs
+                          [default=yes]
+  --enable-enter-pivot-root
+                          Use pivot_root to enter rootfs [default=yes]
+  --enable-enter-move-mount
+                          Use MS_MOVE+chroot to enter rootfs [default=yes]
+  --enable-enter-chroot   Use plain chroot as last resort [default=yes]
+  --enable-default-resolver
+                          Write a default /run/resolv.conf [default=yes]
+  --enable-image-overlay  ext4 image-backed overlay fallback [default=auto]
+  --enable-selinux        Use libselinux if present [default=auto]
+  --disable-binary-trimming
+                          Skip --gc-sections / -fno-unwind-tables etc.
+                          [default=enabled]
   --enable-tests          build the optional native test suite
   --enable-static         link enter statically
 
@@ -1413,6 +1464,15 @@ Some influential environment variables:
   LIBS        libraries to pass to the linker, e.g. -l<library>
   CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
               you have headers in a nonstandard directory <include dir>
+  PKG_CONFIG  path to pkg-config utility
+  PKG_CONFIG_PATH
+              directories to add to pkg-config's search path
+  PKG_CONFIG_LIBDIR
+              path overriding pkg-config's built-in search path
+  SELINUX_CFLAGS
+              C compiler flags for SELINUX, overriding pkg-config
+  SELINUX_LIBS
+              linker flags for SELINUX, overriding pkg-config
 
 Use these variables to override the choices made by 'configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -6918,159 +6978,8 @@ fi
 fi
 
 
-ac_fn_c_check_header_compile "$LINENO" "selinux/selinux.h" "ac_cv_header_selinux_selinux_h" "$ac_includes_default"
-if test "x$ac_cv_header_selinux_selinux_h" = xyes
-then :
-  printf '%s\n' "#define HAVE_SELINUX_SELINUX_H 1" >>confdefs.h
+# ----- helper: auto/yes/no feature --------------------------------------
 
-fi
-ac_fn_c_check_header_compile "$LINENO" "sys/xattr.h" "ac_cv_header_sys_xattr_h" "$ac_includes_default"
-if test "x$ac_cv_header_sys_xattr_h" = xyes
-then :
-  printf '%s\n' "#define HAVE_SYS_XATTR_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "linux/loop.h" "ac_cv_header_linux_loop_h" "$ac_includes_default"
-if test "x$ac_cv_header_linux_loop_h" = xyes
-then :
-  printf '%s\n' "#define HAVE_LINUX_LOOP_H 1" >>confdefs.h
-
-fi
-ac_fn_c_check_header_compile "$LINENO" "time.h" "ac_cv_header_time_h" "$ac_includes_default"
-if test "x$ac_cv_header_time_h" = xyes
-then :
-  printf '%s\n' "#define HAVE_TIME_H 1" >>confdefs.h
-
-fi
-
-{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for library containing setfscreatecon" >&5
-printf %s "checking for library containing setfscreatecon... " >&6; }
-if test ${ac_cv_search_setfscreatecon+y}
-then :
-  printf %s "(cached) " >&6
-else case e in #(
-  e) ac_func_search_save_LIBS=$LIBS
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.
-   The 'extern "C"' is for builds by C++ compilers;
-   although this is not generally supported in C code supporting it here
-   has little cost and some practical benefit (sr 110532).  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char setfscreatecon (void);
-int
-main (void)
-{
-return setfscreatecon ();
-  ;
-  return 0;
-}
-_ACEOF
-for ac_lib in '' selinux
-do
-  if test -z "$ac_lib"; then
-    ac_res="none required"
-  else
-    ac_res=-l$ac_lib
-    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
-  fi
-  if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_setfscreatecon=$ac_res
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext
-  if test ${ac_cv_search_setfscreatecon+y}
-then :
-  break
-fi
-done
-if test ${ac_cv_search_setfscreatecon+y}
-then :
-
-else case e in #(
-  e) ac_cv_search_setfscreatecon=no ;;
-esac
-fi
-rm conftest.$ac_ext
-LIBS=$ac_func_search_save_LIBS ;;
-esac
-fi
-{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_setfscreatecon" >&5
-printf '%s\n' "$ac_cv_search_setfscreatecon" >&6; }
-ac_res=$ac_cv_search_setfscreatecon
-if test "$ac_res" != no
-then :
-  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
-fi
-
-ac_fn_c_check_func "$LINENO" "setfscreatecon" "ac_cv_func_setfscreatecon"
-if test "x$ac_cv_func_setfscreatecon" = xyes
-then :
-  printf '%s\n' "#define HAVE_SETFSCREATECON 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "fsetxattr" "ac_cv_func_fsetxattr"
-if test "x$ac_cv_func_fsetxattr" = xyes
-then :
-  printf '%s\n' "#define HAVE_FSETXATTR 1" >>confdefs.h
-
-fi
-ac_fn_c_check_func "$LINENO" "clock_gettime" "ac_cv_func_clock_gettime"
-if test "x$ac_cv_func_clock_gettime" = xyes
-then :
-  printf '%s\n' "#define HAVE_CLOCK_GETTIME 1" >>confdefs.h
-
-fi
-
-
-if test "x$ac_cv_header_sys_xattr_h"   = "xyes" && \
-       test "x$ac_cv_func_fsetxattr"       = "xyes" && \
-       test "x$ac_cv_header_linux_loop_h"  = "xyes" && \
-       test "x$ac_cv_header_time_h"        = "xyes" && \
-       test "x$ac_cv_func_clock_gettime"   = "xyes"
-then :
-
-printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 1" >>confdefs.h
-
-else case e in #(
-  e)
-printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 0" >>confdefs.h
- ;;
-esac
-fi
-
-if test "x$ac_cv_header_selinux_selinux_h" = "xyes" && \
-       test "x$ac_cv_func_setfscreatecon"      = "xyes"
-then :
-
-printf '%s\n' "#define HAVE_LIBSELINUX 1" >>confdefs.h
-
-fi
-
-enter_enable_selinux=no
-if test "x$ac_cv_header_selinux_selinux_h" = "xyes" && \
-       test "x$ac_cv_func_setfscreatecon"      = "xyes"
-then :
-  enter_enable_selinux=yes
-fi
-if test "x$enter_enable_selinux" = "xyes"
-then :
-
-printf '%s\n' "#define ENABLE_SELINUX 1" >>confdefs.h
-
-else case e in #(
-  e)
-printf '%s\n' "#define ENABLE_SELINUX 0" >>confdefs.h
- ;;
-esac
-fi
 
 # Check whether --enable-runtime-warnings was given.
 if test ${enable_runtime_warnings+y}
@@ -7094,6 +7003,773 @@ printf '%s\n' "#define ENABLE_RUNTIME_WARNINGS 0" >>confdefs.h
 
  ;;
 esac
+fi
+
+
+
+
+
+  # Check whether --enable-overlay was given.
+if test ${enable_overlay+y}
+then :
+  enableval=$enable_overlay; enter_overlay=$enableval
+else case e in #(
+  e) enter_overlay=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_overlay" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_OVERLAY 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_OVERLAY 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_overlay" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-pty-relay was given.
+if test ${enable_pty_relay+y}
+then :
+  enableval=$enable_pty_relay; enter_pty_relay=$enableval
+else case e in #(
+  e) enter_pty_relay=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_pty_relay" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_PTY_RELAY 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_PTY_RELAY 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_pty_relay" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-user-namespace was given.
+if test ${enable_user_namespace+y}
+then :
+  enableval=$enable_user_namespace; enter_user_namespace=$enableval
+else case e in #(
+  e) enter_user_namespace=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_user_namespace" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_USER_NAMESPACE 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_USER_NAMESPACE 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_user_namespace" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-pid-namespace was given.
+if test ${enable_pid_namespace+y}
+then :
+  enableval=$enable_pid_namespace; enter_pid_namespace=$enableval
+else case e in #(
+  e) enter_pid_namespace=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_pid_namespace" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_PID_NAMESPACE 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_PID_NAMESPACE 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_pid_namespace" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-uts-namespace was given.
+if test ${enable_uts_namespace+y}
+then :
+  enableval=$enable_uts_namespace; enter_uts_namespace=$enableval
+else case e in #(
+  e) enter_uts_namespace=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_uts_namespace" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_UTS_NAMESPACE 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_UTS_NAMESPACE 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_uts_namespace" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-ipc-namespace was given.
+if test ${enable_ipc_namespace+y}
+then :
+  enableval=$enable_ipc_namespace; enter_ipc_namespace=$enableval
+else case e in #(
+  e) enter_ipc_namespace=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_ipc_namespace" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_IPC_NAMESPACE 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_IPC_NAMESPACE 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_ipc_namespace" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-enter-open-tree was given.
+if test ${enable_enter_open_tree+y}
+then :
+  enableval=$enable_enter_open_tree; enter_enter_open_tree=$enableval
+else case e in #(
+  e) enter_enter_open_tree=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_enter_open_tree" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_ENTER_OPEN_TREE 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_ENTER_OPEN_TREE 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_enter_open_tree" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-enter-pivot-root was given.
+if test ${enable_enter_pivot_root+y}
+then :
+  enableval=$enable_enter_pivot_root; enter_enter_pivot_root=$enableval
+else case e in #(
+  e) enter_enter_pivot_root=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_enter_pivot_root" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_ENTER_PIVOT_ROOT 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_ENTER_PIVOT_ROOT 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_enter_pivot_root" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-enter-move-mount was given.
+if test ${enable_enter_move_mount+y}
+then :
+  enableval=$enable_enter_move_mount; enter_enter_move_mount=$enableval
+else case e in #(
+  e) enter_enter_move_mount=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_enter_move_mount" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_ENTER_MOVE_MOUNT 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_ENTER_MOVE_MOUNT 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_enter_move_mount" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-enter-chroot was given.
+if test ${enable_enter_chroot+y}
+then :
+  enableval=$enable_enter_chroot; enter_enter_chroot=$enableval
+else case e in #(
+  e) enter_enter_chroot=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_enter_chroot" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_ENTER_CHROOT 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_ENTER_CHROOT 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_enter_chroot" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-default-resolver was given.
+if test ${enable_default_resolver+y}
+then :
+  enableval=$enable_default_resolver; enter_default_resolver=$enableval
+else case e in #(
+  e) enter_default_resolver=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_default_resolver" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_DEFAULT_RESOLVER 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_DEFAULT_RESOLVER 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_default_resolver" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+# image-overlay is auto by default: enabled if xattr support is present. but error if explicitly enabled and is not available.
+
+
+
+
+  # Check whether --enable-image-overlay was given.
+if test ${enable_image_overlay+y}
+then :
+  enableval=$enable_image_overlay; enter_image_overlay=$enableval
+else case e in #(
+  e) enter_image_overlay=auto ;;
+esac
+fi
+
+
+
+    if test "x$enter_image_overlay" = "xauto"; then
+      enter_image_overlay=no
+          for ac_header in linux/loop.h sys/xattr.h
+do :
+  as_ac_Header=`printf '%s\n' "ac_cv_header_$ac_header" | sed "$as_sed_sh"`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"
+then :
+  cat >>confdefs.h <<_ACEOF
+#define `printf '%s\n' "HAVE_$ac_header" | sed "$as_sed_cpp"` 1
+_ACEOF
+ enter_image_overlay=yes
+else case e in #(
+  e) enter_image_overlay=no ;;
+esac
+fi
+
+done
+
+  for ac_func in fsetxattr
+do :
+  ac_fn_c_check_func "$LINENO" "fsetxattr" "ac_cv_func_fsetxattr"
+if test "x$ac_cv_func_fsetxattr" = xyes
+then :
+  printf '%s\n' "#define HAVE_FSETXATTR 1" >>confdefs.h
+ enter_image_overlay=yes
+fi
+
+done
+    fi
+
+
+  if test "x$enter_image_overlay" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_image_overlay" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+if test "x$enter_image_overlay" = "xyes" -a \
+            "x$enter_overlay"       != "xyes"
+then :
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: WARNING: image-overlay requires overlay; disabling image-overlay" >&5
+printf '%s\n' "$as_me: WARNING: image-overlay requires overlay; disabling image-overlay" >&2;}
+   enter_image_overlay=no
+   printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 0" >>confdefs.h
+
+fi
+
+# Check whether --enable-selinux was given.
+if test ${enable_selinux+y}
+then :
+  enableval=$enable_selinux; enter_selinux=$enableval
+else case e in #(
+  e) enter_selinux=auto ;;
+esac
+fi
+
+
+if test "x$enter_overlay"       != "xyes" -o \
+            "x$enter_image_overlay" != "xyes"
+then :
+  if test "x$enter_selinux" = "xyes"
+then :
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: WARNING: --enable-selinux ignored: needs overlay+image-overlay" >&5
+printf '%s\n' "$as_me: WARNING: --enable-selinux ignored: needs overlay+image-overlay" >&2;}
+fi
+   enter_selinux=no
+fi
+
+if test "x$enter_selinux" != "xno"; then
+
+
+
+
+
+
+
+if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
+	if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_PKG_CONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKG_CONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf '%s\n' "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
+printf '%s\n' "$PKG_CONFIG" >&6; }
+else
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKG_CONFIG"; then
+  ac_pt_PKG_CONFIG=$PKG_CONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+printf %s "checking for $ac_word... " >&6; }
+if test ${ac_cv_path_ac_pt_PKG_CONFIG+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) case $ac_pt_PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKG_CONFIG="$ac_pt_PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  case $as_dir in #(((
+    '') as_dir=./ ;;
+    */) ;;
+    *) as_dir=$as_dir/ ;;
+  esac
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKG_CONFIG="$as_dir$ac_word$ac_exec_ext"
+    printf '%s\n' "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac ;;
+esac
+fi
+ac_pt_PKG_CONFIG=$ac_cv_path_ac_pt_PKG_CONFIG
+if test -n "$ac_pt_PKG_CONFIG"; then
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKG_CONFIG" >&5
+printf '%s\n' "$ac_pt_PKG_CONFIG" >&6; }
+else
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKG_CONFIG" = x; then
+    PKG_CONFIG=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+printf '%s\n' "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKG_CONFIG=$ac_pt_PKG_CONFIG
+  fi
+else
+  PKG_CONFIG="$ac_cv_path_PKG_CONFIG"
+fi
+
+fi
+if test -n "$PKG_CONFIG"; then
+	_pkg_min_version=0.9.0
+	{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking pkg-config is at least version $_pkg_min_version" >&5
+printf %s "checking pkg-config is at least version $_pkg_min_version... " >&6; }
+	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
+		{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf '%s\n' "yes" >&6; }
+	else
+		{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+		PKG_CONFIG=""
+	fi
+fi
+
+pkg_failed=no
+{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for libselinux" >&5
+printf %s "checking for libselinux... " >&6; }
+
+if test -n "$SELINUX_CFLAGS"; then
+    pkg_cv_SELINUX_CFLAGS="$SELINUX_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libselinux\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libselinux") 2>&5
+  ac_status=$?
+  printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SELINUX_CFLAGS=`$PKG_CONFIG --cflags "libselinux" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$SELINUX_LIBS"; then
+    pkg_cv_SELINUX_LIBS="$SELINUX_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libselinux\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libselinux") 2>&5
+  ac_status=$?
+  printf '%s\n' "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_SELINUX_LIBS=`$PKG_CONFIG --libs "libselinux" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                SELINUX_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libselinux" 2>&1`
+        else
+                SELINUX_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libselinux" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$SELINUX_PKG_ERRORS" >&5
+
+        have_selinux=no
+elif test $pkg_failed = untried; then
+        { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf '%s\n' "no" >&6; }
+        have_selinux=no
+else
+        SELINUX_CFLAGS=$pkg_cv_SELINUX_CFLAGS
+        SELINUX_LIBS=$pkg_cv_SELINUX_LIBS
+        { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf '%s\n' "yes" >&6; }
+        have_selinux=yes
+fi
+  if test "x$have_selinux" = "xyes"
+then :
+
+printf '%s\n' "#define HAVE_LIBSELINUX 1" >>confdefs.h
+
+else case e in #(
+  e) if test "x$enter_selinux" = "xyes"
+then :
+  as_fn_error $? "--enable-selinux was requested but libselinux not found" "$LINENO" 5
+fi ;;
+esac
+fi
+fi
+ if test "x$have_selinux" = "xyes"; then
+  HAVE_LIBSELINUX_TRUE=
+  HAVE_LIBSELINUX_FALSE='#'
+else
+  HAVE_LIBSELINUX_TRUE='#'
+  HAVE_LIBSELINUX_FALSE=
+fi
+
+
+# Check whether --enable-binary-trimming was given.
+if test ${enable_binary_trimming+y}
+then :
+  enableval=$enable_binary_trimming;
+else case e in #(
+  e) enable_binary_trimming=yes ;;
+esac
+fi
+
+
+if test "x$enable_binary_trimming" = "xyes"
+then :
+
+  CFLAGS="$CFLAGS -ffunction-sections -fdata-sections \
+-fno-unwind-tables -fno-asynchronous-unwind-tables \
+-fno-ident"
+  LDFLAGS="$LDFLAGS -Wl,--gc-sections -Wl,--build-id=none"
+
 fi
 
 # Check whether --enable-tests was given.
@@ -7274,6 +7950,58 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_LIBSELINUX_TRUE}" && test -z "${HAVE_LIBSELINUX_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_LIBSELINUX\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${BUILD_TESTS_TRUE}" && test -z "${BUILD_TESTS_FALSE}"; then
@@ -8601,4 +9329,5 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { printf '%s\n' "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 printf '%s\n' "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
+
 

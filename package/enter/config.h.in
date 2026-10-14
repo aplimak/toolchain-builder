@@ -3,20 +3,47 @@
 /* Emit recoverable runtime warning messages */
 #undef ENABLE_RUNTIME_WARNINGS
 
-/* Enable SELinux label integration */
-#undef ENABLE_SELINUX
+/* Write a default /run/resolv.conf */
+#undef FEATURE_DEFAULT_RESOLVER
 
-/* Enable ext4-on-loop fallback for read-only overlayfs */
+/* Use plain chroot as last resort */
+#undef FEATURE_ENTER_CHROOT
+
+/* Use MS_MOVE+chroot to enter rootfs */
+#undef FEATURE_ENTER_MOVE_MOUNT
+
+/* Use open_tree/move_mount to enter rootfs */
+#undef FEATURE_ENTER_OPEN_TREE
+
+/* Use pivot_root to enter rootfs */
+#undef FEATURE_ENTER_PIVOT_ROOT
+
+/* ext4 image-backed overlay fallback */
 #undef FEATURE_IMAGE_OVERLAY
+
+/* Attempt CLONE_NEWIPC */
+#undef FEATURE_IPC_NAMESPACE
+
+/* Support OverlayFS writable root */
+#undef FEATURE_OVERLAY
+
+/* Attempt CLONE_NEWPID */
+#undef FEATURE_PID_NAMESPACE
+
+/* Private PTY relay with window-size handling */
+#undef FEATURE_PTY_RELAY
+
+/* Attempt CLONE_NEWUSER when invoked with UID!=0 */
+#undef FEATURE_USER_NAMESPACE
+
+/* Attempt CLONE_NEWUTS */
+#undef FEATURE_UTS_NAMESPACE
 
 /* Define to 1 if you have the 'alarm' function. */
 #undef HAVE_ALARM
 
 /* Define to 1 if you have the 'clearenv' function. */
 #undef HAVE_CLEARENV
-
-/* Define to 1 if you have the 'clock_gettime' function. */
-#undef HAVE_CLOCK_GETTIME
 
 /* Define to 1 if you have the 'dup2' function. */
 #undef HAVE_DUP2
@@ -48,7 +75,7 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Use libselinux setfscreatecon for labeling */
+/* Use libselinux */
 #undef HAVE_LIBSELINUX
 
 /* Define to 1 if you have the <linux/loop.h> header file. */
@@ -79,14 +106,8 @@
 /* Define to 1 if you have the <sched.h> header file. */
 #undef HAVE_SCHED_H
 
-/* Define to 1 if you have the <selinux/selinux.h> header file. */
-#undef HAVE_SELINUX_SELINUX_H
-
 /* Define to 1 if you have the 'setenv' function. */
 #undef HAVE_SETENV
-
-/* Define to 1 if you have the 'setfscreatecon' function. */
-#undef HAVE_SETFSCREATECON
 
 /* Define to 1 if you have the 'sethostname' function. */
 #undef HAVE_SETHOSTNAME
@@ -159,9 +180,6 @@
 
 /* Define to 1 if you have the <termios.h> header file. */
 #undef HAVE_TERMIOS_H
-
-/* Define to 1 if you have the <time.h> header file. */
-#undef HAVE_TIME_H
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H

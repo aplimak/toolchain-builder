@@ -6,6 +6,28 @@
 #include "config.h"
 #endif
 
+#ifndef FEATURE_OVERLAY
+#define FEATURE_OVERLAY 1
+#endif
+#if FEATURE_OVERLAY && !defined(FEATURE_IMAGE_OVERLAY)
+#define FEATURE_IMAGE_OVERLAY 1
+#endif
+#ifndef FEATURE_DEFAULT_RESOLVER
+#define FEATURE_DEFAULT_RESOLVER 1
+#endif
+#ifndef FEATURE_ENTER_OPEN_TREE
+#define FEATURE_ENTER_OPEN_TREE 1
+#endif
+#ifndef FEATURE_ENTER_PIVOT_ROOT
+#define FEATURE_ENTER_PIVOT_ROOT 1
+#endif
+#ifndef FEATURE_ENTER_MOVE_MOUNT
+#define FEATURE_ENTER_MOVE_MOUNT 1
+#endif
+#ifndef FEATURE_ENTER_CHROOT
+#define FEATURE_ENTER_CHROOT 1
+#endif
+
 #include "filesystem.h"
 
 #include "diagnostics.h"
@@ -82,7 +104,7 @@ static int mount_filesystem(const char *source, const char *target,
   return mount(source, target, type, flags, options);
 }
 
-#ifdef FEATURE_IMAGE_OVERLAY
+#if FEATURE_IMAGE_OVERLAY
 static int filesystem_supports_xattrs(const char *dir) {
   char path[256];
   snprintf(path, sizeof path, "%s/.xattr_test_%d", dir, getpid());
@@ -125,7 +147,7 @@ static int create_ext4_image(char *mke2fs_path, const char *path,
   return process_run_program(mke2fs_path, arguments, 0);
 }
 
-#ifdef FEATURE_IMAGE_OVERLAY
+#if FEATURE_IMAGE_OVERLAY
 static int open_loop_device(int num, char *out_path, size_t out_size) {
   static const char *const prefixes[] = {"/dev/loop", "/dev/block/loop",
                                          "/dev/loop/", NULL};
@@ -174,6 +196,7 @@ static int open_loop_device(int num, char *out_path, size_t out_size) {
 }
 #endif
 
+#if FEATURE_OVERLAY
 /* Returns 1 if overlayfs is supported, 0 if not. */
 static int overlayfs_is_supported(void) {
   FILE *fp = fopen("/proc/filesystems", "r");
@@ -205,7 +228,7 @@ static int mount_overlay_root(void) {
   }
 
   int inner_mount = 0;
-#ifdef FEATURE_IMAGE_OVERLAY
+#if FEATURE_IMAGE_OVERLAY
   int rc = filesystem_supports_xattrs("./tmp");
   if (rc <= 0) {
     if (rc < 0)
@@ -216,7 +239,7 @@ static int mount_overlay_root(void) {
     char mke2fs_path[PATH_MAX];
     if (filesystem_find_executable("/", "mke2fs", mke2fs_path,
                                    sizeof(mke2fs_path)) != 0) {
-      diagnostic_errno(DIAGNOSTIC_ERROR,
+      diagnostic_errno(DIAGNOSTIC_WARNING,
                        "can't find mke2fs program on the host");
       return -1;
     }
@@ -349,6 +372,7 @@ static int mount_overlay_root(void) {
   }
   return 0;
 }
+#endif
 
 static int create_device(const char *directory, const char *name,
                          unsigned int major_number, unsigned int minor_number,
@@ -486,6 +510,7 @@ static int mount_private_devpts(void) {
   if (mount_filesystem("devpts", "/dev/pts", "devpts", MS_NOSUID | MS_NOEXEC,
                        full_options) == 0)
     return 0;
+
   first_error = errno;
 
   if (mount_filesystem("devpts", "/dev/pts", "devpts", MS_NOSUID | MS_NOEXEC,
@@ -496,6 +521,7 @@ static int mount_private_devpts(void) {
         strerror(first_error));
     return 0;
   }
+
   diagnostic_errno(DIAGNOSTIC_WARNING, "cannot mount private devpts");
   return -1;
 }
@@ -573,6 +599,7 @@ static int mount_optional_filesystem(const char *source, const char *target,
   return -1;
 }
 
+#if FEATURE_DEFAULT_RESOLVER
 static int write_default_resolver(void) {
   static const char resolver_contents[] =
       "nameserver 1.1.1.1\nnameserver 8.8.8.8\n";
@@ -603,6 +630,7 @@ static int write_default_resolver(void) {
   }
   return 0;
 }
+#endif
 
 int filesystem_locate_root(char *root, size_t root_size, const char *argv0) {
   char executable_path[PATH_MAX];
@@ -745,8 +773,10 @@ int filesystem_is_readonly(void) {
 }
 
 int filesystem_mount_root(int root_is_readonly) {
+#if FEATURE_OVERLAY
   if (root_is_readonly && overlayfs_is_supported() && mount_overlay_root() == 0)
     return 0;
+#endif
   if (root_is_readonly)
     diagnostic(DIAGNOSTIC_WARNING,
                "rootfs is read-only and overlay is not avaiable");
@@ -762,8 +792,8 @@ int filesystem_mount_root(int root_is_readonly) {
   return 0;
 }
 
+#if FEATURE_ENTER_OPEN_TREE && defined(SYS_open_tree) && defined(SYS_move_mount)
 static int enter_with_open_tree(void) {
-#if defined(SYS_open_tree) && defined(SYS_move_mount)
   int root_descriptor;
   char resolved[PATH_MAX];
 
@@ -804,16 +834,13 @@ static int enter_with_open_tree(void) {
     return -1;
 
   return 0;
-#else
-  errno = ENOSYS;
-  return -1;
-#endif
 }
+#endif
 
+#if FEATURE_ENTER_PIVOT_ROOT && defined(SYS_pivot_root)
 static int enter_with_pivot_root(void) {
   char old_root[] = ".enter-oldroot-XXXXXX";
 
-#ifdef SYS_pivot_root
   char resolved[PATH_MAX];
   if (!realpath(".", resolved)) {
     return -1;
@@ -835,12 +862,10 @@ static int enter_with_pivot_root(void) {
     diagnostic_errno(DIAGNOSTIC_WARNING,
                      "cannot remove previous root directory");
   return 0;
-#else
-  errno = ENOSYS;
-  return -1;
-#endif
 }
+#endif
 
+#if FEATURE_ENTER_MOVE_MOUNT
 static int enter_with_move_mount(void) {
   char resolved[PATH_MAX];
   if (!realpath(".", resolved))
@@ -857,23 +882,38 @@ static int enter_with_move_mount(void) {
 
   return 0;
 }
+#endif
 
 int filesystem_enter_root(void) {
+#if FEATURE_ENTER_OPEN_TREE && defined(SYS_open_tree) && defined(SYS_move_mount)
   if (enter_with_open_tree() == 0)
     return 0;
   if (errno != ENOSYS)
     diagnostic_errno(DIAGNOSTIC_WARNING, "open_tree failed");
+#endif
 
+#if FEATURE_ENTER_PIVOT_ROOT && defined(SYS_pivot_root)
   if (enter_with_pivot_root() == 0)
     return 0;
   diagnostic_errno(DIAGNOSTIC_WARNING, "pivot_root failed");
+#endif
 
+#if FEATURE_ENTER_MOVE_MOUNT
   if (enter_with_move_mount() == 0)
     return 0;
   diagnostic_errno(DIAGNOSTIC_WARNING, "move-mount failed");
+#endif
 
+#if FEATURE_ENTER_CHROOT
   if (chroot(".") == 0 && chdir("/") == 0)
     return 0;
+#endif
+
+#if !FEATURE_ENTER_OPEN_TREE && !FEATURE_ENTER_PIVOT_ROOT &&                   \
+    !FEATURE_ENTER_MOVE_MOUNT && !FEATURE_ENTER_CHROOT
+#error "At least one root-entry strategy must be enabled"
+#endif
+
   diagnostic_errno(DIAGNOSTIC_ERROR, "cannot enter rootfs");
   return -1;
 }
@@ -922,7 +962,9 @@ int filesystem_setup_pseudo_filesystems(int *private_devpts_available) {
   else {
     (void)mount_optional_filesystem("tmpfs", "/run", "tmpfs",
                                     MS_NOSUID | MS_NODEV, "mode=0755");
+#if FEATURE_DEFAULT_RESOLVER
     (void)write_default_resolver();
+#endif
     if (ensure_directory("/run/lock", 0755) != 0)
       diagnostic_errno(DIAGNOSTIC_WARNING, "cannot prepare /run/lock");
   }
