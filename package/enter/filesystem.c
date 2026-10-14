@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#include <asm-generic/errno-base.h>
 #endif
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -109,7 +108,8 @@ static int filesystem_supports_xattrs(const char *dir) {
 }
 #endif
 
-static int create_ext4_image(const char *path, off_t size_bytes, int *out_fd) {
+static int create_ext4_image(char *mke2fs_path, const char *path,
+                             off_t size_bytes, int *out_fd) {
   int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0600);
   if (fd < 0)
     return -1;
@@ -122,7 +122,7 @@ static int create_ext4_image(const char *path, off_t size_bytes, int *out_fd) {
 
   char *arguments[] = {"mke2fs", "-t",  "ext4",       "-F", "-q",
                        "-I",     "256", (char *)path, NULL};
-  return process_run_program("mke2fs", arguments, 0);
+  return process_run_program(mke2fs_path, arguments, 0);
 }
 
 #ifdef FEATURE_IMAGE_OVERLAY
@@ -213,6 +213,14 @@ static int mount_overlay_root(void) {
     else
       diagnostic(DIAGNOSTIC_WARNING, "tmpfs does not support xattrs");
 
+    char mke2fs_path[PATH_MAX];
+    if (filesystem_find_executable("/", "mke2fs", mke2fs_path,
+                                   sizeof(mke2fs_path)) != 0) {
+      diagnostic_errno(DIAGNOSTIC_ERROR,
+                       "can't find mke2fs program on the host");
+      return -1;
+    }
+
     static const char *const IMG_CTX = "u:object_r:media_rw_data_file:s0";
     static const char *const IMG_PATH = "./tmp/overlay.img";
     static const off_t IMG_SIZE = 256L * 1024 * 1024;
@@ -221,7 +229,7 @@ static int mount_overlay_root(void) {
       diagnostic_errno(DIAGNOSTIC_WARNING, "setfscreatecon");
 #endif
     int fd = -1;
-    rc = create_ext4_image(IMG_PATH, IMG_SIZE, &fd);
+    rc = create_ext4_image(mke2fs_path, IMG_PATH, IMG_SIZE, &fd);
     if (rc != 0) {
       if (rc < 0)
         diagnostic_errno(DIAGNOSTIC_WARNING, "create ext4 image error");
