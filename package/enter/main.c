@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#include <stdio.h>
+#include <string.h>
 #endif
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -12,11 +14,20 @@
 #include <limits.h>
 #include <unistd.h>
 
+#ifndef PACKAGE_STRING
+#define PACKAGE_STRING "enter"
+#endif
+
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
 
 int main(int argument_count, char *arguments[]) {
+  if (argument_count >= 2 && strcmp(arguments[1], "--version") == 0) {
+    printf("%s\n", PACKAGE_STRING);
+    return 0;
+  }
+
   char root[PATH_MAX];
   char found_program_path[PATH_MAX];
   char *automatic_arguments[4];
