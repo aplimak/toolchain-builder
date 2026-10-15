@@ -214,6 +214,9 @@
    <sysmacros.h>. */
 #undef MAJOR_IN_SYSMACROS
 
+/* Path to mke2fs */
+#undef MKE2FS_PATH
+
 /* Name of package */
 #undef PACKAGE
 

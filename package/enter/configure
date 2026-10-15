@@ -770,6 +770,7 @@ enable_default_resolver
 enable_image_overlay
 enable_selinux
 enable_binary_trimming
+with_mke2fs
 enable_tests
 enable_static
 '
@@ -1455,6 +1456,7 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
 
+  --with-mke2fs=PATH      name or path to mke2fs [default=mke2fs]
 
 Some influential environment variables:
   CC          C compiler command
@@ -7771,6 +7773,22 @@ then :
   LDFLAGS="$LDFLAGS -Wl,--gc-sections -Wl,--build-id=none"
 
 fi
+
+
+# Check whether --with-mke2fs was given.
+if test ${with_mke2fs+y}
+then :
+  withval=$with_mke2fs; host_mke2fs="$withval"
+else case e in #(
+  e) host_mke2fs="mke2fs"
+ ;;
+esac
+fi
+
+
+
+printf '%s\n' "#define MKE2FS_PATH \"\$host_mke2fs\"" >>confdefs.h
+
 
 # Check whether --enable-tests was given.
 if test ${enable_tests+y}

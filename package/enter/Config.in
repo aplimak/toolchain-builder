@@ -43,6 +43,13 @@ config BR2_PACKAGE_ENTER_IMAGE_OVERLAY
 	  When overlay-on-tmpfs cannot be used (e.g. no xattrs),
 	  create an ext4 loop image to back upper/work.
 
+config BR2_PACKAGE_ENTER_MKE2FS_PATH
+	string "mke2fs path"
+	default "mke2fs"
+	depends on BR2_PACKAGE_ENTER_IMAGE_OVERLAY
+	help
+	  Path to the mke2fs or compatible alternatives. Needed for ext4 image creation.
+
 config BR2_PACKAGE_ENTER_PTY_RELAY
 	bool "Private PTY relay"
 	default y

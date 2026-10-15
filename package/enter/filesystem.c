@@ -27,6 +27,9 @@
 #ifndef FEATURE_ENTER_CHROOT
 #define FEATURE_ENTER_CHROOT 1
 #endif
+#ifndef MKE2FS_PATH
+#define MKE2FS_PATH "mke2fs"
+#endif
 
 #include "filesystem.h"
 
@@ -141,8 +144,9 @@ static int create_ext4_image(char *mke2fs_path, const char *path,
   }
   *out_fd = fd;
 
-  char *arguments[] = {"mke2fs", "-t",  "ext4",       "-F", "-q",
-                       "-I",     "256", (char *)path, NULL};
+  char *arguments[] = {
+      basename(mke2fs_path), "-t", "ext4", "-F", "-q", "-I", "256",
+      (char *)path,          NULL};
   return process_run_program(mke2fs_path, arguments, 0);
 }
 
@@ -235,7 +239,7 @@ static int mount_overlay_root(void) {
       diagnostic(DIAGNOSTIC_WARNING, "tmpfs does not support xattrs");
 
     char mke2fs_path[PATH_MAX];
-    if (filesystem_find_executable("/", "mke2fs", mke2fs_path,
+    if (filesystem_find_executable("/", MKE2FS_PATH, mke2fs_path,
                                    sizeof(mke2fs_path)) != 0) {
       diagnostic_errno(DIAGNOSTIC_WARNING,
                        "can't find mke2fs program on the host");

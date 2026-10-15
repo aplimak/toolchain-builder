@@ -180,6 +180,16 @@ AS_IF([test "x$enable_binary_trimming" = "xyes"], [
   LDFLAGS="$LDFLAGS -Wl,--gc-sections -Wl,--build-id=none"
 ])
 
+AC_ARG_WITH([mke2fs],
+    [AS_HELP_STRING([--with-mke2fs=PATH],
+        [name or path to mke2fs @<:@default=mke2fs@:>@])],
+    [host_mke2fs="$withval"],
+    [host_mke2fs="mke2fs"]
+)
+
+AC_DEFINE([MKE2FS_PATH], ["$host_mke2fs"],
+    [Path to mke2fs])
+
 AC_ARG_ENABLE(
     [tests],
     [AS_HELP_STRING([--enable-tests], [build the optional native test suite])],
