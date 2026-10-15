@@ -822,8 +822,9 @@ static int enter_with_open_tree(void) {
   if (!realpath(".", resolved))
     return -1;
 
-  root_descriptor = syscall(SYS_open_tree, AT_FDCWD, resolved,
-                            OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC | AT_RECURSIVE);
+  root_descriptor =
+      (int)syscall(SYS_open_tree, AT_FDCWD, resolved,
+                   OPEN_TREE_CLONE | OPEN_TREE_CLOEXEC | AT_RECURSIVE);
   if (root_descriptor < 0)
     return -1;
 
