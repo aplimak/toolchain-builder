@@ -23,6 +23,18 @@ else
 ENTER_CONF_OPTS += --disable-runtime-warnings
 endif
 
+ifeq ($(BR2_PACKAGE_ENTER_CUSTOM_PROGRAM),y)
+ENTER_CONF_OPTS += --enable-custom-program
+else
+ENTER_CONF_OPTS += --disable-custom-program
+endif
+
+ifeq ($(BR2_PACKAGE_ENTER_INIT_SCRIPTS),y)
+ENTER_CONF_OPTS += --enable-init-scripts
+else
+ENTER_CONF_OPTS += --disable-init-scripts
+endif
+
 ifeq ($(BR2_PACKAGE_ENTER_OVERLAY),y)
 ENTER_CONF_OPTS += --enable-overlay
 else

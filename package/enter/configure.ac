@@ -110,6 +110,10 @@ AS_IF([test "x$enable_runtime_warnings" = "xyes"],
     [AC_DEFINE([ENABLE_RUNTIME_WARNINGS], [0], [Emit recoverable runtime warning messages])]
 )
 
+ENTER_FEATURE([custom-program],
+  [Allow running custom program instead of default login], [yes])
+ENTER_FEATURE([init-scripts],
+  [Automatically run init scripts if ran with no argument], [yes])
 ENTER_FEATURE([overlay],
   [Support OverlayFS writable root], [yes])
 ENTER_FEATURE([pty-relay],

@@ -29,6 +29,19 @@ config BR2_PACKAGE_ENTER_RUNTIME_WARNINGS
 	  fallback paths. Errors are always reported. Compiler warning
 	  diagnostics remain enabled regardless of this setting.
 
+config BR2_PACKAGE_ENTER_CUSTOM_PROGRAM
+	bool "Allow running custom program"
+	default y
+	help
+	  Allow running custom program instead of default login
+      like enter python [args]
+
+config BR2_PACKAGE_ENTER_INIT_SCRIPTS
+	bool "Run init scripts by default"
+	default y
+	help
+	  Automatically run init scripts if invoked with no custom program.
+
 config BR2_PACKAGE_ENTER_OVERLAY
 	bool "Enable OverlayFS writable root"
 	default y

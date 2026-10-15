@@ -3,6 +3,9 @@
 /* Emit recoverable runtime warning messages */
 #undef ENABLE_RUNTIME_WARNINGS
 
+/* Allow running custom program instead of default login */
+#undef FEATURE_CUSTOM_PROGRAM
+
 /* Write a default /run/resolv.conf */
 #undef FEATURE_DEFAULT_RESOLVER
 
@@ -20,6 +23,9 @@
 
 /* ext4 image-backed overlay fallback */
 #undef FEATURE_IMAGE_OVERLAY
+
+/* Automatically run init scripts if ran with no argument */
+#undef FEATURE_INIT_SCRIPTS
 
 /* Attempt CLONE_NEWIPC */
 #undef FEATURE_IPC_NAMESPACE

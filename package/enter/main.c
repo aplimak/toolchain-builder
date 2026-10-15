@@ -1,17 +1,25 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <string.h>
 #endif
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#ifndef FEATURE_CUSTOM_PROGRAM
+#define FEATURE_CUSTOM_PROGRAM 1
+#endif
+#ifndef FEATURE_INIT_SCRIPTS
+#define FEATURE_INIT_SCRIPTS 1
+#endif
+
 #include "container.h"
 #include "diagnostics.h"
 #include "filesystem.h"
 
 #include <limits.h>
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #ifndef PACKAGE_STRING
@@ -23,9 +31,30 @@
 #endif
 
 int main(int argument_count, char *arguments[]) {
-  if (argument_count >= 2 && strcmp(arguments[1], "--version") == 0) {
-    printf("%s\n", PACKAGE_STRING);
-    return 0;
+  if (argument_count >= 2) {
+    if (strcmp(arguments[1], "--help") == 0) {
+      printf("usage: ");
+      if (FEATURE_CUSTOM_PROGRAM) {
+        printf("%s [program] [args]... \tEstablish environment and "
+               "run provided program or login\n",
+               arguments[0]);
+      } else {
+        printf("%s \t\t\tEstablish environment and "
+               "run login program\n",
+               arguments[0]);
+      }
+      printf("       %s --help\n", arguments[0]);
+      printf("       %s --version\n", arguments[0]);
+      return 0;
+    }
+    if (strcmp(arguments[1], "--version") == 0) {
+      printf("%s\n", PACKAGE_STRING);
+      return 0;
+    }
+    if (!FEATURE_CUSTOM_PROGRAM) {
+      fprintf(stderr, "Unknown option: %s\n", arguments[1]);
+      return 1;
+    }
   }
 
   char root[PATH_MAX];
@@ -66,7 +95,7 @@ int main(int argument_count, char *arguments[]) {
     automatic_arguments[3] = NULL;
     program = found_program_path;
     program_arguments = automatic_arguments;
-    run_init_scripts = 1;
+    run_init_scripts = FEATURE_INIT_SCRIPTS;
   }
 
   return container_run(program, (char *const *)program_arguments,

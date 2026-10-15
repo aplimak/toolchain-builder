@@ -756,6 +756,8 @@ enable_shared
 with_xmlto
 with_fop
 enable_runtime_warnings
+enable_custom_program
+enable_init_scripts
 enable_overlay
 enable_pty_relay
 enable_user_namespace
@@ -1426,6 +1428,10 @@ Optional Features:
 
   --disable-runtime-warnings
                           suppress recoverable runtime warning messages
+  --enable-custom-program Allow running custom program instead of default
+                          login [default=yes]
+  --enable-init-scripts   Automatically run init scripts if ran with no
+                          argument [default=yes]
   --enable-overlay        Support OverlayFS writable root [default=yes]
   --enable-pty-relay      Private PTY relay with window-size handling
                           [default=yes]
@@ -7011,6 +7017,82 @@ fi
 
 
 
+  # Check whether --enable-custom-program was given.
+if test ${enable_custom_program+y}
+then :
+  enableval=$enable_custom_program; enter_custom_program=$enableval
+else case e in #(
+  e) enter_custom_program=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_custom_program" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_CUSTOM_PROGRAM 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_CUSTOM_PROGRAM 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_custom_program" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
+  # Check whether --enable-init-scripts was given.
+if test ${enable_init_scripts+y}
+then :
+  enableval=$enable_init_scripts; enter_init_scripts=$enableval
+else case e in #(
+  e) enter_init_scripts=yes ;;
+esac
+fi
+
+
+
+
+  if test "x$enter_init_scripts" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_INIT_SCRIPTS 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_INIT_SCRIPTS 0" >>confdefs.h
+ ;;
+esac
+fi
+   if test "x$enter_init_scripts" = "xyes"; then
+  enter_macro_TRUE=
+  enter_macro_FALSE='#'
+else
+  enter_macro_TRUE='#'
+  enter_macro_FALSE=
+fi
+
+
+
+
+
+
+
+
+
   # Check whether --enable-overlay was given.
 if test ${enable_overlay+y}
 then :
@@ -7968,6 +8050,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
+  as_fn_error $? "conditional \"enter_macro\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
