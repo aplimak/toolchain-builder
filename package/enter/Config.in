@@ -70,18 +70,32 @@ config BR2_PACKAGE_ENTER_IPC_NAMESPACE
 config BR2_PACKAGE_ENTER_OPEN_TREE
 	bool "Use open_tree/move_mount to enter root"
 	default y
+	help
+	    This method works on newer kernels and will silently fail on older kernels
 
 config BR2_PACKAGE_ENTER_PIVOT_ROOT
 	bool "Use pivot_root to enter root"
 	default y
+	help
+	    pivot_root is quirky, its very likely to not work.
 
 config BR2_PACKAGE_ENTER_MOVE_MOUNT
 	bool "Use MS_MOVE + chroot to enter root"
 	default y
+	help
+	    This method works on almost all kernels.
 
 config BR2_PACKAGE_ENTER_CHROOT
 	bool "Plain chroot as last resort"
-	default y
+	default n
+	help
+	    This method has major security flaws, its not recommended at all. use it only if other ones not work.
+
+config BR2_PACKAGE_ENTER_ENSURE_USABLE
+    bool
+    depends on !BR2_PACKAGE_ENTER_OPEN_TREE && !BR2_PACKAGE_ENTER_PIVOT_ROOT
+    default y
+    select BR2_PACKAGE_ENTER_MOVE_MOUNT
 
 config BR2_PACKAGE_ENTER_DEFAULT_RESOLVER
 	bool "Write default /run/resolv.conf"
