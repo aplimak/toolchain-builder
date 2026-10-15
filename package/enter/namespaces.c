@@ -22,6 +22,7 @@
 #include "namespaces.h"
 
 #include "diagnostics.h"
+#include "filesystem.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -142,7 +143,16 @@ int namespaces_setup_child(void) {
 
 #if FEATURE_UTS_NAMESPACE && defined(CLONE_NEWUTS)
   if (unshare(CLONE_NEWUTS) == 0) {
-    if (sethostname("buildroot", sizeof("buildroot") - 1) != 0)
+    char *final_hostname;
+    char detected_hostname[256];
+    if (filesystem_read_hostname(detected_hostname,
+                                 sizeof(detected_hostname)) == 0)
+      final_hostname = detected_hostname;
+    else {
+      diagnostic_errno(DIAGNOSTIC_WARNING, "cannot read hostname from rootfs");
+      final_hostname = "buildroot";
+    }
+    if (sethostname(final_hostname, strlen(final_hostname)) != 0)
       diagnostic_errno(DIAGNOSTIC_WARNING, "cannot set container hostname");
   } else
     diagnostic_errno(DIAGNOSTIC_WARNING, "UTS namespace unavailable");

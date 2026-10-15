@@ -6,6 +6,7 @@
 #include "config.h"
 #endif
 
+
 #ifndef FEATURE_OVERLAY
 #define FEATURE_OVERLAY 1
 #endif
@@ -45,6 +46,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -991,5 +993,43 @@ int filesystem_setup_pseudo_filesystems(int *private_devpts_available) {
     if (ensure_directory("/run/lock", 0755) != 0)
       diagnostic_errno(DIAGNOSTIC_WARNING, "cannot prepare /run/lock");
   }
+  return 0;
+}
+
+int filesystem_read_hostname(char *out, size_t out_size) {
+  if (out == NULL || out_size < 2)
+    return -1;
+
+  char root[PATH_MAX];
+  char path[PATH_MAX];
+  if (!realpath(".", root))
+    return -1;
+  if (format_root_path(path, sizeof(path), root, "/etc/hostname") != 0)
+    return -1;
+
+  FILE *f = fopen(path, "r");
+  if (f == NULL) {
+    return -1;
+  }
+
+  if (fgets(out, (int)out_size, f) == NULL) {
+    fclose(f);
+    return -1;
+  }
+
+  if (strchr(out, '\n') == NULL && !feof(f)) {
+    fclose(f);
+    errno = ENAMETOOLONG;
+    return -1;
+  }
+
+  fclose(f);
+  out[strcspn(out, "\r\n")] = '\0';
+
+  if (out[0] == '\0') {
+    errno = EINVAL;
+    return -1;
+  }
+
   return 0;
 }

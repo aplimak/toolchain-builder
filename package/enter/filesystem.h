@@ -47,5 +47,6 @@ int filesystem_is_readonly(void);
 int filesystem_mount_root(int root_is_readonly);
 int filesystem_enter_root(void);
 int filesystem_setup_pseudo_filesystems(int *private_devpts_available);
+int filesystem_read_hostname(char *out, size_t out_size);
 
 #endif
