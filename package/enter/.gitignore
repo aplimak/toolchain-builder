@@ -18,5 +18,6 @@
 /config.h
 /stamp-h1
 /tests/.dirstamp
+/compile_commands.json
 
 /build/
