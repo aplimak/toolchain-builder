@@ -709,7 +709,8 @@ int filesystem_find_executable(const char *root, const char *executable,
     }
     if (stat(path, &status) == 0 && S_ISREG(status.st_mode) &&
         access(path, X_OK) == 0) {
-      if (snprintf(out_path, out_path_size, "%s", executable) >=
+      if (snprintf(out_path, out_path_size, "/%s",
+                   executable[0] == '/' ? executable + 1 : executable) >=
           (int)out_path_size) {
         errno = ENAMETOOLONG;
         return -1;

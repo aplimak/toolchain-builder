@@ -15,5 +15,8 @@
 /tests/test_enter.log
 /tests/test_enter.trs
 /tests/.deps/
+/config.h
+/stamp-h1
+/tests/.dirstamp
 
 /build/
