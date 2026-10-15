@@ -133,17 +133,16 @@ ENTER_FEATURE([enter-pivot-root],
 ENTER_FEATURE([enter-move-mount],
   [Use MS_MOVE+chroot to enter rootfs], [yes])
 ENTER_FEATURE([enter-chroot],
-  [Use plain chroot as last resort], [yes])
+  [Use plain chroot as last resort], [no])
 ENTER_FEATURE([default-resolver],
   [Write a default /run/resolv.conf], [yes])
 
 # image-overlay is auto by default: enabled if xattr support is present. but error if explicitly enabled and is not available.
 ENTER_FEATURE([image-overlay],
   [ext4 image-backed overlay fallback], [auto],
-  [enter_image_overlay=no
-   AC_CHECK_HEADERS([linux/loop.h sys/xattr.h],
-     [enter_image_overlay=yes], [enter_image_overlay=no])
-   AC_CHECK_FUNCS([fsetxattr], [enter_image_overlay=yes], [])])
+  [enter_image_overlay=yes
+   AC_CHECK_HEADERS([linux/loop.h sys/xattr.h], [], [enter_image_overlay=no])
+   AC_CHECK_FUNCS([fsetxattr], [], [enter_image_overlay=no])])
 
 AS_IF([test "x$enter_image_overlay" = "xyes" -a \
             "x$enter_overlay"       != "xyes"],

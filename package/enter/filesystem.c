@@ -48,11 +48,11 @@
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
-#ifdef FEATURE_IMAGE_OVERLAY
+#if FEATURE_IMAGE_OVERLAY
 #include <linux/loop.h>
 #include <sys/xattr.h>
 #include <time.h>
-#ifdef HAVE_LIBSELINUX
+#if HAVE_LIBSELINUX
 #include <selinux/selinux.h>
 #endif
 #endif
@@ -782,7 +782,7 @@ int filesystem_mount_root(int root_is_readonly) {
 #endif
   if (root_is_readonly)
     diagnostic(DIAGNOSTIC_WARNING,
-               "rootfs is read-only and overlay is not avaiable");
+               "rootfs is read-only and overlay is not available");
 
   if (mount_filesystem(".", ".", NULL, MS_BIND, NULL) != 0) {
     diagnostic_errno(DIAGNOSTIC_ERROR, "cannot bind rootfs mountpoint");

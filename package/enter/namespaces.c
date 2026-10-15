@@ -117,7 +117,7 @@ int namespaces_try_pid(void) {
   diagnostic_errno(DIAGNOSTIC_WARNING, "PID namespace unavailable");
 #else
   diagnostic(DIAGNOSTIC_WARNING,
-             "PID namespaces are unavailable in these build");
+             "PID namespaces are unavailable in this build");
 #endif
 #endif
   return 0;
