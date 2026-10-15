@@ -116,6 +116,41 @@ ENTER_FEATURE([init-scripts],
   [Automatically run init scripts if ran with no argument], [yes])
 ENTER_FEATURE([overlay],
   [Support OverlayFS writable root], [yes])
+
+AC_ARG_ENABLE([image-overlay],
+  [AS_HELP_STRING([--enable-image-overlay],
+    [ext4 image-backed overlay fallback @<:@default=auto@:>@])],
+  [enter_image_overlay=$enableval],
+  [enter_image_overlay=auto])
+
+if test "x$enter_overlay" != "xyes"; then
+  AS_IF([test "x$enter_image_overlay" = "xyes"],
+        [AC_MSG_WARN([--enable-image-overlay ignored: overlay is disabled])])
+  enter_image_overlay=no
+fi
+
+if test "x$enter_overlay" = "xyes" -a "x$enter_image_overlay" != "xno"; then
+  enter_image_overlay_usable=yes
+  AC_CHECK_HEADERS([linux/loop.h sys/xattr.h], [],
+    [enter_image_overlay_usable=no])
+  AC_CHECK_FUNCS([fsetxattr], [], [enter_image_overlay_usable=no])
+
+  if test "x$enter_image_overlay_usable" = "xyes"; then
+    enter_image_overlay=yes
+  else
+    AS_IF([test "x$enter_image_overlay" = "xyes"],
+      [AC_MSG_ERROR([--enable-image-overlay was requested but linux/loop.h,
+                     sys/xattr.h or fsetxattr are missing])],
+      [enter_image_overlay=no])
+  fi
+fi
+
+AS_IF([test "x$enter_image_overlay" = "xyes"],
+  [AC_DEFINE([FEATURE_IMAGE_OVERLAY], [1], [ext4 image-backed overlay fallback])],
+  [AC_DEFINE([FEATURE_IMAGE_OVERLAY], [0], [])])
+AM_CONDITIONAL([IMAGE_OVERLAY],
+  [test "x$enter_image_overlay" = "xyes"])
+
 ENTER_FEATURE([pty-relay],
   [Private PTY relay with window-size handling], [yes])
 ENTER_FEATURE([user-namespace],
@@ -136,19 +171,6 @@ ENTER_FEATURE([enter-chroot],
   [Use plain chroot as last resort], [no])
 ENTER_FEATURE([default-resolver],
   [Write a default /run/resolv.conf], [yes])
-
-# image-overlay is auto by default: enabled if xattr support is present. but error if explicitly enabled and is not available.
-ENTER_FEATURE([image-overlay],
-  [ext4 image-backed overlay fallback], [auto],
-  [enter_image_overlay=yes
-   AC_CHECK_HEADERS([linux/loop.h sys/xattr.h], [], [enter_image_overlay=no])
-   AC_CHECK_FUNCS([fsetxattr], [], [enter_image_overlay=no])])
-
-AS_IF([test "x$enter_image_overlay" = "xyes" -a \
-            "x$enter_overlay"       != "xyes"],
-  [AC_MSG_WARN([image-overlay requires overlay; disabling image-overlay])
-   enter_image_overlay=no
-   AC_DEFINE([FEATURE_IMAGE_OVERLAY], [0], [])])
 
 AC_ARG_ENABLE([selinux],
   [AS_HELP_STRING([--enable-selinux],
