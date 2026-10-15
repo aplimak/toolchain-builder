@@ -10,12 +10,6 @@ ENTER_SITE_METHOD = local
 ENTER_LICENSE = MIT
 ENTER_LICENSE_FILES =
 ENTER_CONF_OPTS = --enable-static --bindir=/ --disable-tests --enable-binary-trimming
-ifeq ($(BR2_PACKAGE_LIBSELINUX),y)
-ENTER_DEPENDENCIES += libselinux
-ENTER_CONF_OPTS += --enable-selinux
-else
-ENTER_CONF_OPTS += --disable-selinux
-endif
 
 ifeq ($(BR2_PACKAGE_ENTER_RUNTIME_WARNINGS),y)
 ENTER_CONF_OPTS += --enable-runtime-warnings
@@ -43,6 +37,12 @@ endif
 
 ifeq ($(BR2_PACKAGE_ENTER_IMAGE_OVERLAY),y)
 ENTER_CONF_OPTS += --enable-image-overlay --with-mke2fs=$(BR2_PACKAGE_ENTER_MKE2FS_PATH)
+ifeq ($(BR2_PACKAGE_LIBSELINUX),y)
+ENTER_DEPENDENCIES += libselinux
+ENTER_CONF_OPTS += --with-selinux
+else
+ENTER_CONF_OPTS += --without-selinux
+endif
 else
 ENTER_CONF_OPTS += --disable-image-overlay
 endif

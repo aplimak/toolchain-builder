@@ -172,26 +172,24 @@ ENTER_FEATURE([enter-chroot],
 ENTER_FEATURE([default-resolver],
   [Write a default /run/resolv.conf], [yes])
 
-AC_ARG_ENABLE([selinux],
-  [AS_HELP_STRING([--enable-selinux],
-                  [Use libselinux if present @<:@default=auto@:>@])],
-  [enter_selinux=$enableval], [enter_selinux=auto])
+AC_ARG_WITH([selinux],
+  [AS_HELP_STRING([--with-selinux],
+                  [Use libselinux for ext4 image labeling @<:@default=no@:>@])],
+  [enter_selinux=$withval],
+  [enter_selinux=no])
 
-AS_IF([test "x$enter_overlay"       != "xyes" -o \
-            "x$enter_image_overlay" != "xyes"],
-  [AS_IF([test "x$enter_selinux" = "xyes"],
-     [AC_MSG_WARN([--enable-selinux ignored: needs overlay+image-overlay])])
-   enter_selinux=no])
+AS_CASE([$enter_selinux],
+  [yes], [],
+  [no],  [],
+  [*],   [AC_MSG_ERROR([--with-selinux only accepts yes or no])])
 
-if test "x$enter_selinux" != "xno"; then
-  PKG_CHECK_MODULES([SELINUX], [libselinux],
-    [have_selinux=yes], [have_selinux=no])
-  AS_IF([test "x$have_selinux" = "xyes"],
-    [AC_DEFINE([HAVE_LIBSELINUX], [1], [Use libselinux])],
-    [AS_IF([test "x$enter_selinux" = "xyes"],
-       [AC_MSG_ERROR([--enable-selinux was requested but libselinux not found])])])
-fi
-AM_CONDITIONAL([HAVE_LIBSELINUX], [test "x$have_selinux" = "xyes"])
+AS_IF([test "x$enter_selinux" = "xyes"], [
+  PKG_CHECK_MODULES([SELINUX], [libselinux])
+  AC_DEFINE([HAVE_LIBSELINUX], [1], [Use libselinux])
+], [
+  AC_DEFINE([HAVE_LIBSELINUX], [0], [])
+])
+AM_CONDITIONAL([HAVE_LIBSELINUX], [test "x$enter_selinux" = "xyes"])
 
 AC_ARG_ENABLE([binary-trimming],
   [AS_HELP_STRING([--disable-binary-trimming],

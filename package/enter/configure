@@ -636,6 +636,8 @@ SELINUX_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
+IMAGE_OVERLAY_FALSE
+IMAGE_OVERLAY_TRUE
 enter_macro_FALSE
 enter_macro_TRUE
 LIBOBJS
@@ -759,6 +761,7 @@ enable_runtime_warnings
 enable_custom_program
 enable_init_scripts
 enable_overlay
+enable_image_overlay
 enable_pty_relay
 enable_user_namespace
 enable_pid_namespace
@@ -769,8 +772,7 @@ enable_enter_pivot_root
 enable_enter_move_mount
 enable_enter_chroot
 enable_default_resolver
-enable_image_overlay
-enable_selinux
+with_selinux
 enable_binary_trimming
 with_mke2fs
 enable_tests
@@ -1433,6 +1435,7 @@ Optional Features:
   --enable-init-scripts   Automatically run init scripts if ran with no
                           argument [default=yes]
   --enable-overlay        Support OverlayFS writable root [default=yes]
+  --enable-image-overlay  ext4 image-backed overlay fallback [default=auto]
   --enable-pty-relay      Private PTY relay with window-size handling
                           [default=yes]
   --enable-user-namespace Attempt CLONE_NEWUSER when invoked with UID!=0
@@ -1447,11 +1450,9 @@ Optional Features:
                           Use pivot_root to enter rootfs [default=yes]
   --enable-enter-move-mount
                           Use MS_MOVE+chroot to enter rootfs [default=yes]
-  --enable-enter-chroot   Use plain chroot as last resort [default=yes]
+  --enable-enter-chroot   Use plain chroot as last resort [default=no]
   --enable-default-resolver
                           Write a default /run/resolv.conf [default=yes]
-  --enable-image-overlay  ext4 image-backed overlay fallback [default=auto]
-  --enable-selinux        Use libselinux if present [default=auto]
   --disable-binary-trimming
                           Skip --gc-sections / -fno-unwind-tables etc.
                           [default=enabled]
@@ -1462,6 +1463,7 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
 
+  --with-selinux          Use libselinux for ext4 image labeling [default=no]
   --with-mke2fs=PATH      name or path to mke2fs [default=mke2fs]
 
 Some influential environment variables:
@@ -7128,6 +7130,92 @@ fi
 
 
 
+# Check whether --enable-image-overlay was given.
+if test ${enable_image_overlay+y}
+then :
+  enableval=$enable_image_overlay; enter_image_overlay=$enableval
+else case e in #(
+  e) enter_image_overlay=auto ;;
+esac
+fi
+
+
+if test "x$enter_overlay" != "xyes"; then
+  if test "x$enter_image_overlay" = "xyes"
+then :
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: WARNING: --enable-image-overlay ignored: overlay is disabled" >&5
+printf '%s\n' "$as_me: WARNING: --enable-image-overlay ignored: overlay is disabled" >&2;}
+fi
+  enter_image_overlay=no
+fi
+
+if test "x$enter_overlay" = "xyes" -a "x$enter_image_overlay" != "xno"; then
+  enter_image_overlay_usable=yes
+         for ac_header in linux/loop.h sys/xattr.h
+do :
+  as_ac_Header=`printf '%s\n' "ac_cv_header_$ac_header" | sed "$as_sed_sh"`
+ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"
+then :
+  cat >>confdefs.h <<_ACEOF
+#define `printf '%s\n' "HAVE_$ac_header" | sed "$as_sed_cpp"` 1
+_ACEOF
+
+else case e in #(
+  e) enter_image_overlay_usable=no ;;
+esac
+fi
+
+done
+
+  for ac_func in fsetxattr
+do :
+  ac_fn_c_check_func "$LINENO" "fsetxattr" "ac_cv_func_fsetxattr"
+if test "x$ac_cv_func_fsetxattr" = xyes
+then :
+  printf '%s\n' "#define HAVE_FSETXATTR 1" >>confdefs.h
+
+else case e in #(
+  e) enter_image_overlay_usable=no ;;
+esac
+fi
+
+done
+
+  if test "x$enter_image_overlay_usable" = "xyes"; then
+    enter_image_overlay=yes
+  else
+    if test "x$enter_image_overlay" = "xyes"
+then :
+  as_fn_error $? "--enable-image-overlay was requested but linux/loop.h,
+                     sys/xattr.h or fsetxattr are missing" "$LINENO" 5
+else case e in #(
+  e) enter_image_overlay=no ;;
+esac
+fi
+  fi
+fi
+
+if test "x$enter_image_overlay" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 0" >>confdefs.h
+ ;;
+esac
+fi
+ if test "x$enter_image_overlay" = "xyes"; then
+  IMAGE_OVERLAY_TRUE=
+  IMAGE_OVERLAY_FALSE='#'
+else
+  IMAGE_OVERLAY_TRUE='#'
+  IMAGE_OVERLAY_FALSE=
+fi
+
+
+
 
 
 
@@ -7440,7 +7528,7 @@ if test ${enable_enter_chroot+y}
 then :
   enableval=$enable_enter_chroot; enter_enter_chroot=$enableval
 else case e in #(
-  e) enter_enter_chroot=yes ;;
+  e) enter_enter_chroot=no ;;
 esac
 fi
 
@@ -7508,109 +7596,28 @@ fi
 
 
 
-# image-overlay is auto by default: enabled if xattr support is present. but error if explicitly enabled and is not available.
 
-
-
-
-  # Check whether --enable-image-overlay was given.
-if test ${enable_image_overlay+y}
+# Check whether --with-selinux was given.
+if test ${with_selinux+y}
 then :
-  enableval=$enable_image_overlay; enter_image_overlay=$enableval
+  withval=$with_selinux; enter_selinux=$withval
 else case e in #(
-  e) enter_image_overlay=auto ;;
+  e) enter_selinux=no ;;
 esac
 fi
 
 
-
-    if test "x$enter_image_overlay" = "xauto"; then
-      enter_image_overlay=no
-          for ac_header in linux/loop.h sys/xattr.h
-do :
-  as_ac_Header=`printf '%s\n' "ac_cv_header_$ac_header" | sed "$as_sed_sh"`
-ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
-if eval test \"x\$"$as_ac_Header"\" = x"yes"
-then :
-  cat >>confdefs.h <<_ACEOF
-#define `printf '%s\n' "HAVE_$ac_header" | sed "$as_sed_cpp"` 1
-_ACEOF
- enter_image_overlay=yes
-else case e in #(
-  e) enter_image_overlay=no ;;
+case $enter_selinux in #(
+  yes) :
+     ;; #(
+  no) :
+     ;; #(
+  *) :
+    as_fn_error $? "--with-selinux only accepts yes or no" "$LINENO" 5 ;; #(
+  *) :
+     ;;
 esac
-fi
 
-done
-
-  for ac_func in fsetxattr
-do :
-  ac_fn_c_check_func "$LINENO" "fsetxattr" "ac_cv_func_fsetxattr"
-if test "x$ac_cv_func_fsetxattr" = xyes
-then :
-  printf '%s\n' "#define HAVE_FSETXATTR 1" >>confdefs.h
- enter_image_overlay=yes
-fi
-
-done
-    fi
-
-
-  if test "x$enter_image_overlay" = "xyes"
-then :
-
-printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 1" >>confdefs.h
-
-else case e in #(
-  e) printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 0" >>confdefs.h
- ;;
-esac
-fi
-   if test "x$enter_image_overlay" = "xyes"; then
-  enter_macro_TRUE=
-  enter_macro_FALSE='#'
-else
-  enter_macro_TRUE='#'
-  enter_macro_FALSE=
-fi
-
-
-
-
-
-
-if test "x$enter_image_overlay" = "xyes" -a \
-            "x$enter_overlay"       != "xyes"
-then :
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: WARNING: image-overlay requires overlay; disabling image-overlay" >&5
-printf '%s\n' "$as_me: WARNING: image-overlay requires overlay; disabling image-overlay" >&2;}
-   enter_image_overlay=no
-   printf '%s\n' "#define FEATURE_IMAGE_OVERLAY 0" >>confdefs.h
-
-fi
-
-# Check whether --enable-selinux was given.
-if test ${enable_selinux+y}
-then :
-  enableval=$enable_selinux; enter_selinux=$enableval
-else case e in #(
-  e) enter_selinux=auto ;;
-esac
-fi
-
-
-if test "x$enter_overlay"       != "xyes" -o \
-            "x$enter_image_overlay" != "xyes"
-then :
-  if test "x$enter_selinux" = "xyes"
-then :
-  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: WARNING: --enable-selinux ignored: needs overlay+image-overlay" >&5
-printf '%s\n' "$as_me: WARNING: --enable-selinux ignored: needs overlay+image-overlay" >&2;}
-fi
-   enter_selinux=no
-fi
-
-if test "x$enter_selinux" != "xno"; then
 
 
 
@@ -7743,6 +7750,9 @@ printf '%s\n' "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
+if test "x$enter_selinux" = "xyes"
+then :
+
 
 pkg_failed=no
 { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for libselinux" >&5
@@ -7802,32 +7812,50 @@ fi
         # Put the nasty error message in config.log where it belongs
         echo "$SELINUX_PKG_ERRORS" >&5
 
-        have_selinux=no
+        as_fn_error $? "Package requirements (libselinux) were not met:
+
+$SELINUX_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables SELINUX_CFLAGS
+and SELINUX_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
         { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf '%s\n' "no" >&6; }
-        have_selinux=no
+        { { printf '%s\n' "$as_me:${as_lineno-$LINENO}: error: in '$ac_pwd':" >&5
+printf '%s\n' "$as_me: error: in '$ac_pwd':" >&2;}
+as_fn_error $? "A pkg-config implementation could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables SELINUX_CFLAGS
+and SELINUX_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get a pkg-config implementation, see <http://github.com/pkgconf/pkgconf>.
+See 'config.log' for more details" "$LINENO" 5; }
 else
         SELINUX_CFLAGS=$pkg_cv_SELINUX_CFLAGS
         SELINUX_LIBS=$pkg_cv_SELINUX_LIBS
         { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf '%s\n' "yes" >&6; }
-        have_selinux=yes
+
 fi
-  if test "x$have_selinux" = "xyes"
-then :
 
 printf '%s\n' "#define HAVE_LIBSELINUX 1" >>confdefs.h
 
+
 else case e in #(
-  e) if test "x$enter_selinux" = "xyes"
-then :
-  as_fn_error $? "--enable-selinux was requested but libselinux not found" "$LINENO" 5
-fi ;;
+  e)
+  printf '%s\n' "#define HAVE_LIBSELINUX 0" >>confdefs.h
+
+ ;;
 esac
 fi
-fi
- if test "x$have_selinux" = "xyes"; then
+ if test "x$enter_selinux" = "xyes"; then
   HAVE_LIBSELINUX_TRUE=
   HAVE_LIBSELINUX_FALSE='#'
 else
@@ -8064,8 +8092,8 @@ if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
   as_fn_error $? "conditional \"enter_macro\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
-if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
-  as_fn_error $? "conditional \"enter_macro\" was never defined.
+if test -z "${IMAGE_OVERLAY_TRUE}" && test -z "${IMAGE_OVERLAY_FALSE}"; then
+  as_fn_error $? "conditional \"IMAGE_OVERLAY\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
