@@ -548,7 +548,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AM_CFLAGS = -std=gnu99 -Wall -Wextra -Wformat=2
+AM_CFLAGS = -std=gnu99 -Wall -Wextra -Wformat=2 -Wpedantic -Wconversion -Wshadow -Wundef -fanalyzer
 EXTRA_DIST = README.md tests/test_enter.c
 enter_SOURCES = \
 	main.c \

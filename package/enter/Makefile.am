@@ -1,4 +1,4 @@
-AM_CFLAGS = -std=gnu99 -Wall -Wextra -Wformat=2
+AM_CFLAGS = -std=gnu99 -Wall -Wextra -Wformat=2 -Wpedantic -Wconversion -Wshadow -Wundef -fanalyzer
 EXTRA_DIST = README.md tests/test_enter.c
 
 bin_PROGRAMS = enter
