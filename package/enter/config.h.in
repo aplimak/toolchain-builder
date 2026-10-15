@@ -21,6 +21,9 @@
 /* Use pivot_root to enter rootfs */
 #undef FEATURE_ENTER_PIVOT_ROOT
 
+/* Always use overlay even if rootfs is writable */
+#undef FEATURE_FORCED_OVERLAY
+
 /* ext4 image-backed overlay fallback */
 #undef FEATURE_IMAGE_OVERLAY
 

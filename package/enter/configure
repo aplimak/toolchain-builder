@@ -638,6 +638,8 @@ PKG_CONFIG_PATH
 PKG_CONFIG
 IMAGE_OVERLAY_FALSE
 IMAGE_OVERLAY_TRUE
+FORCED_OVERLAY_FALSE
+FORCED_OVERLAY_TRUE
 enter_macro_FALSE
 enter_macro_TRUE
 LIBOBJS
@@ -761,6 +763,7 @@ enable_runtime_warnings
 enable_custom_program
 enable_init_scripts
 enable_overlay
+enable_forced_overlay
 enable_image_overlay
 enable_pty_relay
 enable_user_namespace
@@ -1435,6 +1438,8 @@ Optional Features:
   --enable-init-scripts   Automatically run init scripts if ran with no
                           argument [default=yes]
   --enable-overlay        Support OverlayFS writable root [default=yes]
+  --enable-forced-overlay Always use overlay even if rootfs is writable
+                          [default=no]
   --enable-image-overlay  ext4 image-backed overlay fallback [default=auto]
   --enable-pty-relay      Private PTY relay with window-size handling
                           [default=yes]
@@ -7095,6 +7100,7 @@ fi
 
 
 
+
   # Check whether --enable-overlay was given.
 if test ${enable_overlay+y}
 then :
@@ -7128,6 +7134,41 @@ fi
 
 
 
+
+
+# Check whether --enable-forced-overlay was given.
+if test ${enable_forced_overlay+y}
+then :
+  enableval=$enable_forced_overlay; enter_forced_overlay=$enableval
+else case e in #(
+  e) enter_forced_overlay=no ;;
+esac
+fi
+
+
+if test "x$enter_forced_overlay" = "xyes" -a \
+            "x$enter_overlay"        != "xyes"
+then :
+  as_fn_error $? "--enable-forced-overlay requires --enable-overlay" "$LINENO" 5
+fi
+
+if test "x$enter_forced_overlay" = "xyes"
+then :
+
+printf '%s\n' "#define FEATURE_FORCED_OVERLAY 1" >>confdefs.h
+
+else case e in #(
+  e) printf '%s\n' "#define FEATURE_FORCED_OVERLAY 0" >>confdefs.h
+ ;;
+esac
+fi
+ if test "x$enter_forced_overlay" = "xyes"; then
+  FORCED_OVERLAY_TRUE=
+  FORCED_OVERLAY_FALSE='#'
+else
+  FORCED_OVERLAY_TRUE='#'
+  FORCED_OVERLAY_FALSE=
+fi
 
 
 # Check whether --enable-image-overlay was given.
@@ -8090,6 +8131,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${enter_macro_TRUE}" && test -z "${enter_macro_FALSE}"; then
   as_fn_error $? "conditional \"enter_macro\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${FORCED_OVERLAY_TRUE}" && test -z "${FORCED_OVERLAY_FALSE}"; then
+  as_fn_error $? "conditional \"FORCED_OVERLAY\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${IMAGE_OVERLAY_TRUE}" && test -z "${IMAGE_OVERLAY_FALSE}"; then

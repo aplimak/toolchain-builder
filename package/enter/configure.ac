@@ -114,8 +114,25 @@ ENTER_FEATURE([custom-program],
   [Allow running custom program instead of default login], [yes])
 ENTER_FEATURE([init-scripts],
   [Automatically run init scripts if ran with no argument], [yes])
+
 ENTER_FEATURE([overlay],
   [Support OverlayFS writable root], [yes])
+
+AC_ARG_ENABLE([forced-overlay],
+  [AS_HELP_STRING([--enable-forced-overlay],
+                  [Always use overlay even if rootfs is writable @<:@default=no@:>@])],
+  [enter_forced_overlay=$enableval],
+  [enter_forced_overlay=no])
+
+AS_IF([test "x$enter_forced_overlay" = "xyes" -a \
+            "x$enter_overlay"        != "xyes"],
+  [AC_MSG_ERROR([--enable-forced-overlay requires --enable-overlay])])
+
+AS_IF([test "x$enter_forced_overlay" = "xyes"],
+  [AC_DEFINE([FEATURE_FORCED_OVERLAY], [1],
+             [Always use overlay even if rootfs is writable])],
+  [AC_DEFINE([FEATURE_FORCED_OVERLAY], [0], [])])
+AM_CONDITIONAL([FORCED_OVERLAY], [test "x$enter_forced_overlay" = "xyes"])
 
 AC_ARG_ENABLE([image-overlay],
   [AS_HELP_STRING([--enable-image-overlay],

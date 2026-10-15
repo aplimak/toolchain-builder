@@ -48,6 +48,13 @@ config BR2_PACKAGE_ENTER_OVERLAY
 	help
 	  Provide a writable overlay when the rootfs is read-only.
 
+config BR2_PACKAGE_ENTER_FORCED_OVERLAY
+	bool "Use OverlayFS even if the root is writable"
+	default n
+	depends on BR2_PACKAGE_ENTER_OVERLAY
+	help
+	  Use overlay even if the rootfs is writable.
+
 config BR2_PACKAGE_ENTER_IMAGE_OVERLAY
 	bool "ext4 image-backed overlay fallback"
 	default y

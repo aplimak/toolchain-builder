@@ -35,6 +35,12 @@ else
 ENTER_CONF_OPTS += --disable-overlay
 endif
 
+ifeq ($(BR2_PACKAGE_ENTER_FORCED_OVERLAY),y)
+ENTER_CONF_OPTS += --enable-forced-overlay
+else
+ENTER_CONF_OPTS += --disable-forced-overlay
+endif
+
 ifeq ($(BR2_PACKAGE_ENTER_IMAGE_OVERLAY),y)
 ENTER_CONF_OPTS += --enable-image-overlay --with-mke2fs=$(BR2_PACKAGE_ENTER_MKE2FS_PATH)
 ifeq ($(BR2_PACKAGE_LIBSELINUX),y)
