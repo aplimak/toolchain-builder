@@ -134,6 +134,22 @@ AS_IF([test "x$enter_forced_overlay" = "xyes"],
   [AC_DEFINE([FEATURE_FORCED_OVERLAY], [0], [])])
 AM_CONDITIONAL([FORCED_OVERLAY], [test "x$enter_forced_overlay" = "xyes"])
 
+AC_ARG_ENABLE([required-overlay],
+  [AS_HELP_STRING([--enable-required-overlay],
+                  [Error out instead of falling back when overlay mount fails @<:@default=no@:>@])],
+  [enter_required_overlay=$enableval],
+  [enter_required_overlay=no])
+
+AS_IF([test "x$enter_required_overlay" = "xyes" -a \
+            "x$enter_overlay"        != "xyes"],
+  [AC_MSG_ERROR([--enable-required-overlay requires --enable-overlay])])
+
+AS_IF([test "x$enter_required_overlay" = "xyes"],
+  [AC_DEFINE([FEATURE_REQUIRED_OVERLAY], [1],
+             [Error out instead of falling back when overlay mount fails])],
+  [AC_DEFINE([FEATURE_REQUIRED_OVERLAY], [0], [])])
+AM_CONDITIONAL([REQUIRED_OVERLAY], [test "x$enter_required_overlay" = "xyes"])
+
 AC_ARG_ENABLE([image-overlay],
   [AS_HELP_STRING([--enable-image-overlay],
     [ext4 image-backed overlay fallback @<:@default=auto@:>@])],

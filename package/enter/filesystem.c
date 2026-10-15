@@ -12,6 +12,9 @@
 #ifndef FEATURE_FORCED_OVERLAY
 #define FEATURE_FORCED_OVERLAY 1
 #endif
+#ifndef FEATURE_REQUIRED_OVERLAY
+#define FEATURE_REQUIRED_OVERLAY 1
+#endif
 #ifndef FEATURE_IMAGE_OVERLAY
 #define FEATURE_IMAGE_OVERLAY 1
 #endif
@@ -207,8 +210,12 @@ static int overlayfs_is_supported(void) {
   FILE *fp = fopen("/proc/filesystems", "r");
   char line[256];
 
-  if (!fp)
-    return 0;
+  if (!fp) {
+#if FEATURE_REQUIRED_OVERLAY
+    diagnostic_errno(DIAGNOSTIC_WARNING, "can't open /proc/filesystems");
+#endif
+    return -1;
+  }
 
   while (fgets(line, sizeof line, fp)) {
     /* Lines look like "nodev\toverlay" or "nodev\toverlayfs". */
@@ -218,6 +225,9 @@ static int overlayfs_is_supported(void) {
     }
   }
   fclose(fp);
+#if FEATURE_REQUIRED_OVERLAY
+  diagnostic(DIAGNOSTIC_WARNING, "overlay is not supported");
+#endif
   return 0;
 }
 
@@ -780,9 +790,14 @@ int filesystem_is_readonly(void) {
 
 int filesystem_mount_root(int root_is_readonly) {
 #if FEATURE_OVERLAY
-  if ((FEATURE_FORCED_OVERLAY || root_is_readonly) &&
-      overlayfs_is_supported() && mount_overlay_root() == 0)
-    return 0;
+  if (FEATURE_FORCED_OVERLAY || root_is_readonly) {
+    if (overlayfs_is_supported() && mount_overlay_root() == 0)
+      return 0;
+#if FEATURE_REQUIRED_OVERLAY
+    diagnostic(DIAGNOSTIC_ERROR, "overlay is required");
+    return -1;
+#endif
+  }
 #endif
   if (root_is_readonly)
     diagnostic(DIAGNOSTIC_WARNING,

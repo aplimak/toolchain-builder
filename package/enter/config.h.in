@@ -42,6 +42,9 @@
 /* Private PTY relay with window-size handling */
 #undef FEATURE_PTY_RELAY
 
+/* Error out instead of falling back when overlay mount fails */
+#undef FEATURE_REQUIRED_OVERLAY
+
 /* Attempt CLONE_NEWUSER when invoked with UID!=0 */
 #undef FEATURE_USER_NAMESPACE
 
