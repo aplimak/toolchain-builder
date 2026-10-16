@@ -16,7 +16,10 @@ enter_SOURCES = \
 	namespaces.h \
 	process.c \
 	process.h
-enter_LDFLAGS = @ENTER_STATIC_LDFLAGS@
+
+enter_CPPFLAGS = $(SELINUX_CFLAGS)
+enter_LDADD    = $(SELINUX_LIBS)
+enter_LDFLAGS  = @ENTER_STATIC_LDFLAGS@
 
 if BUILD_TESTS
 check_PROGRAMS = tests/test_enter
@@ -27,6 +30,7 @@ tests_test_enter_SOURCES = \
 	environment.c \
 	filesystem.c \
 	process.c
-tests_test_enter_CPPFLAGS = -DHAVE_CONFIG_H -I$(top_builddir) -I$(top_srcdir)
-tests_test_enter_CFLAGS = $(AM_CFLAGS)
+tests_test_enter_CFLAGS   = $(AM_CFLAGS)
+tests_test_enter_CPPFLAGS = -DHAVE_CONFIG_H -I$(top_builddir) -I$(top_srcdir) $(SELINUX_CFLAGS)
+tests_test_enter_LDADD    = $(SELINUX_LIBS)
 endif

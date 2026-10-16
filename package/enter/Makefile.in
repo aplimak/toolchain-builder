@@ -107,11 +107,13 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_enter_OBJECTS = main.$(OBJEXT) container.$(OBJEXT) \
-	diagnostics.$(OBJEXT) environment.$(OBJEXT) \
-	filesystem.$(OBJEXT) namespaces.$(OBJEXT) process.$(OBJEXT)
+am_enter_OBJECTS = enter-main.$(OBJEXT) enter-container.$(OBJEXT) \
+	enter-diagnostics.$(OBJEXT) enter-environment.$(OBJEXT) \
+	enter-filesystem.$(OBJEXT) enter-namespaces.$(OBJEXT) \
+	enter-process.$(OBJEXT)
 enter_OBJECTS = $(am_enter_OBJECTS)
-enter_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+enter_DEPENDENCIES = $(am__DEPENDENCIES_1)
 enter_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(enter_LDFLAGS) \
 	$(LDFLAGS) -o $@
 am__tests_test_enter_SOURCES_DIST = tests/test_enter.c diagnostics.c \
@@ -124,7 +126,8 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @BUILD_TESTS_TRUE@	tests_test_enter-filesystem.$(OBJEXT) \
 @BUILD_TESTS_TRUE@	tests_test_enter-process.$(OBJEXT)
 tests_test_enter_OBJECTS = $(am_tests_test_enter_OBJECTS)
-tests_test_enter_LDADD = $(LDADD)
+@BUILD_TESTS_TRUE@tests_test_enter_DEPENDENCIES =  \
+@BUILD_TESTS_TRUE@	$(am__DEPENDENCIES_1)
 tests_test_enter_LINK = $(CCLD) $(tests_test_enter_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
@@ -142,10 +145,11 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp = $(SHELL) $(top_srcdir)/build-aux/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/container.Po \
-	./$(DEPDIR)/diagnostics.Po ./$(DEPDIR)/environment.Po \
-	./$(DEPDIR)/filesystem.Po ./$(DEPDIR)/main.Po \
-	./$(DEPDIR)/namespaces.Po ./$(DEPDIR)/process.Po \
+am__depfiles_remade = ./$(DEPDIR)/enter-container.Po \
+	./$(DEPDIR)/enter-diagnostics.Po \
+	./$(DEPDIR)/enter-environment.Po \
+	./$(DEPDIR)/enter-filesystem.Po ./$(DEPDIR)/enter-main.Po \
+	./$(DEPDIR)/enter-namespaces.Po ./$(DEPDIR)/enter-process.Po \
 	./$(DEPDIR)/tests_test_enter-diagnostics.Po \
 	./$(DEPDIR)/tests_test_enter-environment.Po \
 	./$(DEPDIR)/tests_test_enter-filesystem.Po \
@@ -565,6 +569,8 @@ enter_SOURCES = \
 	process.c \
 	process.h
 
+enter_CPPFLAGS = $(SELINUX_CFLAGS)
+enter_LDADD = $(SELINUX_LIBS)
 enter_LDFLAGS = @ENTER_STATIC_LDFLAGS@
 @BUILD_TESTS_TRUE@TESTS = $(check_PROGRAMS)
 @BUILD_TESTS_TRUE@tests_test_enter_SOURCES = \
@@ -574,8 +580,9 @@ enter_LDFLAGS = @ENTER_STATIC_LDFLAGS@
 @BUILD_TESTS_TRUE@	filesystem.c \
 @BUILD_TESTS_TRUE@	process.c
 
-@BUILD_TESTS_TRUE@tests_test_enter_CPPFLAGS = -DHAVE_CONFIG_H -I$(top_builddir) -I$(top_srcdir)
 @BUILD_TESTS_TRUE@tests_test_enter_CFLAGS = $(AM_CFLAGS)
+@BUILD_TESTS_TRUE@tests_test_enter_CPPFLAGS = -DHAVE_CONFIG_H -I$(top_builddir) -I$(top_srcdir) $(SELINUX_CFLAGS)
+@BUILD_TESTS_TRUE@tests_test_enter_LDADD = $(SELINUX_LIBS)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -698,13 +705,13 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/container.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diagnostics.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/environment.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/filesystem.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/namespaces.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/process.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enter-container.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enter-diagnostics.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enter-environment.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enter-filesystem.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enter-main.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enter-namespaces.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/enter-process.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tests_test_enter-diagnostics.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tests_test_enter-environment.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tests_test_enter-filesystem.Po@am__quote@ # am--include-marker
@@ -732,6 +739,104 @@ am--depfiles: $(am__depfiles_remade)
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+enter-main.o: main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-main.o -MD -MP -MF $(DEPDIR)/enter-main.Tpo -c -o enter-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-main.Tpo $(DEPDIR)/enter-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='enter-main.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+
+enter-main.obj: main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-main.obj -MD -MP -MF $(DEPDIR)/enter-main.Tpo -c -o enter-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-main.Tpo $(DEPDIR)/enter-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='enter-main.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+
+enter-container.o: container.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-container.o -MD -MP -MF $(DEPDIR)/enter-container.Tpo -c -o enter-container.o `test -f 'container.c' || echo '$(srcdir)/'`container.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-container.Tpo $(DEPDIR)/enter-container.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='container.c' object='enter-container.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-container.o `test -f 'container.c' || echo '$(srcdir)/'`container.c
+
+enter-container.obj: container.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-container.obj -MD -MP -MF $(DEPDIR)/enter-container.Tpo -c -o enter-container.obj `if test -f 'container.c'; then $(CYGPATH_W) 'container.c'; else $(CYGPATH_W) '$(srcdir)/container.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-container.Tpo $(DEPDIR)/enter-container.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='container.c' object='enter-container.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-container.obj `if test -f 'container.c'; then $(CYGPATH_W) 'container.c'; else $(CYGPATH_W) '$(srcdir)/container.c'; fi`
+
+enter-diagnostics.o: diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-diagnostics.o -MD -MP -MF $(DEPDIR)/enter-diagnostics.Tpo -c -o enter-diagnostics.o `test -f 'diagnostics.c' || echo '$(srcdir)/'`diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-diagnostics.Tpo $(DEPDIR)/enter-diagnostics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='diagnostics.c' object='enter-diagnostics.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-diagnostics.o `test -f 'diagnostics.c' || echo '$(srcdir)/'`diagnostics.c
+
+enter-diagnostics.obj: diagnostics.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-diagnostics.obj -MD -MP -MF $(DEPDIR)/enter-diagnostics.Tpo -c -o enter-diagnostics.obj `if test -f 'diagnostics.c'; then $(CYGPATH_W) 'diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/diagnostics.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-diagnostics.Tpo $(DEPDIR)/enter-diagnostics.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='diagnostics.c' object='enter-diagnostics.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-diagnostics.obj `if test -f 'diagnostics.c'; then $(CYGPATH_W) 'diagnostics.c'; else $(CYGPATH_W) '$(srcdir)/diagnostics.c'; fi`
+
+enter-environment.o: environment.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-environment.o -MD -MP -MF $(DEPDIR)/enter-environment.Tpo -c -o enter-environment.o `test -f 'environment.c' || echo '$(srcdir)/'`environment.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-environment.Tpo $(DEPDIR)/enter-environment.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='environment.c' object='enter-environment.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-environment.o `test -f 'environment.c' || echo '$(srcdir)/'`environment.c
+
+enter-environment.obj: environment.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-environment.obj -MD -MP -MF $(DEPDIR)/enter-environment.Tpo -c -o enter-environment.obj `if test -f 'environment.c'; then $(CYGPATH_W) 'environment.c'; else $(CYGPATH_W) '$(srcdir)/environment.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-environment.Tpo $(DEPDIR)/enter-environment.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='environment.c' object='enter-environment.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-environment.obj `if test -f 'environment.c'; then $(CYGPATH_W) 'environment.c'; else $(CYGPATH_W) '$(srcdir)/environment.c'; fi`
+
+enter-filesystem.o: filesystem.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-filesystem.o -MD -MP -MF $(DEPDIR)/enter-filesystem.Tpo -c -o enter-filesystem.o `test -f 'filesystem.c' || echo '$(srcdir)/'`filesystem.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-filesystem.Tpo $(DEPDIR)/enter-filesystem.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='filesystem.c' object='enter-filesystem.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-filesystem.o `test -f 'filesystem.c' || echo '$(srcdir)/'`filesystem.c
+
+enter-filesystem.obj: filesystem.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-filesystem.obj -MD -MP -MF $(DEPDIR)/enter-filesystem.Tpo -c -o enter-filesystem.obj `if test -f 'filesystem.c'; then $(CYGPATH_W) 'filesystem.c'; else $(CYGPATH_W) '$(srcdir)/filesystem.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-filesystem.Tpo $(DEPDIR)/enter-filesystem.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='filesystem.c' object='enter-filesystem.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-filesystem.obj `if test -f 'filesystem.c'; then $(CYGPATH_W) 'filesystem.c'; else $(CYGPATH_W) '$(srcdir)/filesystem.c'; fi`
+
+enter-namespaces.o: namespaces.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-namespaces.o -MD -MP -MF $(DEPDIR)/enter-namespaces.Tpo -c -o enter-namespaces.o `test -f 'namespaces.c' || echo '$(srcdir)/'`namespaces.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-namespaces.Tpo $(DEPDIR)/enter-namespaces.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='namespaces.c' object='enter-namespaces.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-namespaces.o `test -f 'namespaces.c' || echo '$(srcdir)/'`namespaces.c
+
+enter-namespaces.obj: namespaces.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-namespaces.obj -MD -MP -MF $(DEPDIR)/enter-namespaces.Tpo -c -o enter-namespaces.obj `if test -f 'namespaces.c'; then $(CYGPATH_W) 'namespaces.c'; else $(CYGPATH_W) '$(srcdir)/namespaces.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-namespaces.Tpo $(DEPDIR)/enter-namespaces.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='namespaces.c' object='enter-namespaces.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-namespaces.obj `if test -f 'namespaces.c'; then $(CYGPATH_W) 'namespaces.c'; else $(CYGPATH_W) '$(srcdir)/namespaces.c'; fi`
+
+enter-process.o: process.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-process.o -MD -MP -MF $(DEPDIR)/enter-process.Tpo -c -o enter-process.o `test -f 'process.c' || echo '$(srcdir)/'`process.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-process.Tpo $(DEPDIR)/enter-process.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='process.c' object='enter-process.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-process.o `test -f 'process.c' || echo '$(srcdir)/'`process.c
+
+enter-process.obj: process.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT enter-process.obj -MD -MP -MF $(DEPDIR)/enter-process.Tpo -c -o enter-process.obj `if test -f 'process.c'; then $(CYGPATH_W) 'process.c'; else $(CYGPATH_W) '$(srcdir)/process.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/enter-process.Tpo $(DEPDIR)/enter-process.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='process.c' object='enter-process.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(enter_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o enter-process.obj `if test -f 'process.c'; then $(CYGPATH_W) 'process.c'; else $(CYGPATH_W) '$(srcdir)/process.c'; fi`
 
 tests/test_enter-test_enter.o: tests/test_enter.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(tests_test_enter_CPPFLAGS) $(CPPFLAGS) $(tests_test_enter_CFLAGS) $(CFLAGS) -MT tests/test_enter-test_enter.o -MD -MP -MF tests/$(DEPDIR)/test_enter-test_enter.Tpo -c -o tests/test_enter-test_enter.o `test -f 'tests/test_enter.c' || echo '$(srcdir)/'`tests/test_enter.c
@@ -1324,13 +1429,13 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -f ./$(DEPDIR)/container.Po
-	-rm -f ./$(DEPDIR)/diagnostics.Po
-	-rm -f ./$(DEPDIR)/environment.Po
-	-rm -f ./$(DEPDIR)/filesystem.Po
-	-rm -f ./$(DEPDIR)/main.Po
-	-rm -f ./$(DEPDIR)/namespaces.Po
-	-rm -f ./$(DEPDIR)/process.Po
+	-rm -f ./$(DEPDIR)/enter-container.Po
+	-rm -f ./$(DEPDIR)/enter-diagnostics.Po
+	-rm -f ./$(DEPDIR)/enter-environment.Po
+	-rm -f ./$(DEPDIR)/enter-filesystem.Po
+	-rm -f ./$(DEPDIR)/enter-main.Po
+	-rm -f ./$(DEPDIR)/enter-namespaces.Po
+	-rm -f ./$(DEPDIR)/enter-process.Po
 	-rm -f ./$(DEPDIR)/tests_test_enter-diagnostics.Po
 	-rm -f ./$(DEPDIR)/tests_test_enter-environment.Po
 	-rm -f ./$(DEPDIR)/tests_test_enter-filesystem.Po
@@ -1383,13 +1488,13 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -f ./$(DEPDIR)/container.Po
-	-rm -f ./$(DEPDIR)/diagnostics.Po
-	-rm -f ./$(DEPDIR)/environment.Po
-	-rm -f ./$(DEPDIR)/filesystem.Po
-	-rm -f ./$(DEPDIR)/main.Po
-	-rm -f ./$(DEPDIR)/namespaces.Po
-	-rm -f ./$(DEPDIR)/process.Po
+	-rm -f ./$(DEPDIR)/enter-container.Po
+	-rm -f ./$(DEPDIR)/enter-diagnostics.Po
+	-rm -f ./$(DEPDIR)/enter-environment.Po
+	-rm -f ./$(DEPDIR)/enter-filesystem.Po
+	-rm -f ./$(DEPDIR)/enter-main.Po
+	-rm -f ./$(DEPDIR)/enter-namespaces.Po
+	-rm -f ./$(DEPDIR)/enter-process.Po
 	-rm -f ./$(DEPDIR)/tests_test_enter-diagnostics.Po
 	-rm -f ./$(DEPDIR)/tests_test_enter-environment.Po
 	-rm -f ./$(DEPDIR)/tests_test_enter-filesystem.Po
