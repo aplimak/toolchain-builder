@@ -248,9 +248,11 @@ static int mount_overlay_root(void) {
   int rc = filesystem_supports_xattrs("./tmp");
   if (rc <= 0) {
     if (rc < 0)
-      diagnostic_errno(DIAGNOSTIC_WARNING, "xattr probe failed");
+      diagnostic_errno(DIAGNOSTIC_WARNING,
+                       "xattr probe failed, trying image-overlay anyway");
     else
-      diagnostic(DIAGNOSTIC_WARNING, "tmpfs does not support xattrs");
+      diagnostic(DIAGNOSTIC_WARNING,
+                 "tmpfs does not support xattrs, trying image-overlay");
 
     char mke2fs_path[PATH_MAX];
     if (filesystem_find_executable("/", MKE2FS_PATH, mke2fs_path,
