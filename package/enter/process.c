@@ -488,9 +488,9 @@ static int run_child(const char *program, char *const arguments[],
   int pty_master = -1;
   int pty_slave = -1;
   int status = 0;
-  cc_t end_of_input_character = '\004';
 
 #if FEATURE_PTY_RELAY
+  cc_t end_of_input_character = '\004';
   if (use_private_pty && allocate_private_pty(&pty_master, &pty_slave) != 0) {
     diagnostic_errno(DIAGNOSTIC_WARNING,
                      "cannot allocate private PTY; using inherited console");
@@ -573,7 +573,6 @@ static int run_child(const char *program, char *const arguments[],
   }
 #else
   (void)use_private_pty;
-  (void)end_of_input_character;
 #endif
   if (wait_for_process(child_pid, &status) != 0)
     return -1;

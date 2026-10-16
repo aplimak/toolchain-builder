@@ -6,7 +6,6 @@
 #include "config.h"
 #endif
 
-
 #ifndef FEATURE_OVERLAY
 #define FEATURE_OVERLAY 1
 #endif
