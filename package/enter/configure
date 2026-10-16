@@ -7979,7 +7979,7 @@ fi
 
 
 
-printf '%s\n' "#define MKE2FS_PATH \"\$host_mke2fs\"" >>confdefs.h
+printf '%s\n' "#define MKE2FS_PATH \"$host_mke2fs\"" >>confdefs.h
 
 
 # Check whether --enable-tests was given.

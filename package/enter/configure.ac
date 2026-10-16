@@ -243,7 +243,7 @@ AC_ARG_WITH([mke2fs],
     [host_mke2fs="mke2fs"]
 )
 
-AC_DEFINE([MKE2FS_PATH], ["$host_mke2fs"],
+AC_DEFINE_UNQUOTED([MKE2FS_PATH], ["$host_mke2fs"],
     [Path to mke2fs])
 
 AC_ARG_ENABLE(
