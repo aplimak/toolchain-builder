@@ -44,6 +44,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <limits.h>
 #include <linux/limits.h>
 #include <stdio.h>
@@ -151,10 +152,16 @@ static int create_ext4_image(char *mke2fs_path, const char *path,
   }
   *out_fd = fd;
 
+  char *path_copy = strdup(mke2fs_path);
+  if (!path_copy)
+    return -1;
+
   char *arguments[] = {
-      basename(mke2fs_path), "-t", "ext4", "-F", "-q", "-I", "256",
-      (char *)path,          NULL};
-  return process_run_program(mke2fs_path, arguments, 0);
+      basename(path_copy), "-t", "ext4", "-F", "-q", "-I", "256",
+      (char *)path,        NULL};
+  int rc = process_run_program(mke2fs_path, arguments, 0);
+  free(path_copy);
+  return rc;
 }
 
 static int open_loop_device(int num, char *out_path, size_t out_size) {
