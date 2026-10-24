@@ -3,21 +3,24 @@
 set -eu
 
 if [ $# = 0 ]; then
-    echo "usage: $0 config [make args]..."
+    echo "usage: $0 board"
     exit 1
 fi
 
-config=$1
+board=$1
+config_index="$(realpath "configs/$board.config")"
+
+if [ ! -f "$config_index" ]; then
+    echo "board not found: $board"
+    exit 1
+fi
+
 shift
-if [ ! -f "configs/$config"_defconfig ]; then
-    echo "config not found: $config"
-    exit 1
+
+if [ ! -d "output/$board" ]; then
+    make "$board"
 fi
 
-if [ ! -d "output/$config" ]; then
-    make "$config"_defconfig
-fi
-
-out_path=$(realpath "output/$config")
+out_path=$(realpath "output/$board")
 
 make -C buildroot O="$out_path" "$@"
