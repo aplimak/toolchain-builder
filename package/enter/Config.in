@@ -1,6 +1,5 @@
 config BR2_PACKAGE_ENTER
 	bool "enter"
-	default y
 	depends on BR2_USE_MMU
 	help
 	  Static isolated-rootfs launcher with best-effort namespace isolation.
