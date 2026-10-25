@@ -18,7 +18,7 @@ fi
 shift
 
 if [ ! -d "output/$board" ]; then
-    make "$board"
+    make --no-print-directory "$board"
 fi
 
 out_path=$(realpath "output/$board")
