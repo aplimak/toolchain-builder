@@ -23,4 +23,4 @@ fi
 
 out_path=$(realpath "output/$board")
 
-make -C buildroot O="$out_path" "$@"
+make --no-print-directory -C "$out_path" "$@"
