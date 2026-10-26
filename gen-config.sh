@@ -1,54 +1,107 @@
 #!/usr/bin/env bash
-set -eu
+set -euo pipefail
 
 if [ $# = 0 ]; then
-    echo "usage: $0 board"
+    echo "usage: $0 board" >&2
     exit 1
 fi
 
 board=$1
-config_index="$(realpath "configs/$board.config")"
-
-if [ ! -f "$config_index" ]; then
-    echo "board not found: $board"
+config_index="$(realpath "configs/$board.config" 2>/dev/null || true)"
+if [ -z "$config_index" ] || [ ! -f "$config_index" ]; then
+    echo "board not found: $board" >&2
     exit 1
 fi
 
 mkdir -p .build
 tmp_config="$(realpath ".build/$board")"
 
-fragments=(configs/common.fragment)
-while read -r cfg; do
-    [ -n "$cfg" ] && fragments+=("configs/$cfg")
-done <"$config_index"
-
-# final value for any var touched by '=' (last wins) or '+=' (accumulate)
+# ---------------------------------------------------------------------------
+# Output state
+# ---------------------------------------------------------------------------
 declare -A final_val=() has_app=()
-
-# buffered output, with a parallel array of "which var owns this line" ("" = free-form line)
+declare -a has_app_order=() # first-seen order of += vars
 declare -a out_lines=() out_var=()
 
 out_lines=("BR2_TOOLCHAIN_BUILDROOT_VENDOR=\"$board\"")
 out_var=(BR2_TOOLCHAIN_BUILDROOT_VENDOR)
 final_val[BR2_TOOLCHAIN_BUILDROOT_VENDOR]="$board"
 
-for f in "${fragments[@]}"; do
+# Tracks files currently being processed (cycle detection).
+declare -A in_progress=()
+
+# Expand a path/glob spec and process every match.
+# Resolves relative to $base first; if that finds nothing and $base != configs,
+# falls back to configs/. Absolute paths are used as-is.
+expand_and_process() {
+    local spec="$1" base="$2"
+    local -a matches=()
+    local g
+
+    shopt -s nullglob
+    if [[ "$spec" == /* ]]; then
+        for g in $spec; do matches+=("$g"); done
+    else
+        for g in "$base"/$spec; do matches+=("$g"); done
+        if [ ${#matches[@]} -eq 0 ] && [ "$base" != "configs" ]; then
+            for g in configs/$spec; do matches+=("$g"); done
+        fi
+    fi
+    shopt -u nullglob
+
+    if [ ${#matches[@]} -eq 0 ]; then
+        echo "error: no files match '$spec' (relative to $base)" >&2
+        exit 1
+    fi
+    for g in "${matches[@]}"; do
+        process_file "$g"
+    done
+}
+
+process_file() {
+    local file="$1" real dir
+    real="$(realpath "$file" 2>/dev/null || true)"
+    if [ -z "$real" ] || [ ! -f "$real" ]; then
+        echo "error: config file not found: $file" >&2
+        exit 1
+    fi
+    if [ -n "${in_progress[$real]:-}" ]; then
+        echo "error: include cycle detected at $real" >&2
+        exit 1
+    fi
+    in_progress[$real]=1
+    dir="$(dirname "$real")"
+
+    local line v x prev spec
     while IFS= read -r line || [ -n "$line" ]; do
         line="${line%$'\r'}"
 
-        # VAR+=value: accumulate, never buffer
+        # ---- @FILE / @glob : include directive -------------------------
+        if [[ "$line" =~ ^@(.+)$ ]]; then
+            spec="${BASH_REMATCH[1]}"
+            spec="${spec#"${spec%%[![:space:]]*}"}" # ltrim
+            spec="${spec%"${spec##*[![:space:]]}"}" # rtrim
+            expand_and_process "$spec" "$dir"
+            continue
+        fi
+
+        # ---- VAR+=value : accumulate, never buffered -------------------
         if [[ "$line" =~ ^([A-Za-z0-9_]+)\+=(.*)$ ]]; then
             v="${BASH_REMATCH[1]}"
             x="${BASH_REMATCH[2]%\"}"
             x="${x#\"}"
+            if [ -z "${has_app[$v]:-}" ]; then
+                has_app_order+=("$v")
+            fi
             has_app[$v]=1
-            final_val[$v]="${final_val[$v]:+${final_val[$v]} }$x"
+            prev="${final_val[$v]:-}"
+            final_val[$v]="${prev:+$prev }$x"
             continue
         fi
 
         out_lines+=("$line")
 
-        # VAR=value: remember last value; may be suppressed at emit time
+        # ---- VAR=value : remember last value, may be suppressed --------
         if [[ "$line" =~ ^([A-Za-z0-9_]+)=(.*)$ ]]; then
             v="${BASH_REMATCH[1]}"
             x="${BASH_REMATCH[2]%\"}"
@@ -56,21 +109,34 @@ for f in "${fragments[@]}"; do
             out_var+=("$v")
             final_val[$v]="$x"
         else
-            out_var+=("") # comment / blank / anything else
+            out_var+=("") # comment / blank / free-form
         fi
-    done <"$f"
-done
+    done <"$real"
+
+    unset 'in_progress[$real]'
+}
+
+# Always load common.fragment first (as the original did).
+process_file "configs/core/common.fragment"
+
+while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
+    line="${line#"${line%%[![:space:]]*}"}" # ltrim
+    line="${line%"${line##*[![:space:]]}"}" # rtrim
+    [ -z "$line" ] && continue
+    [[ "$line" == \#* ]] && continue
+    expand_and_process "$line" "configs"
+done <"$config_index"
 
 {
     for i in "${!out_lines[@]}"; do
         v="${out_var[$i]}"
-        # keep the line if it isn't an assignment to a var that ever used '+='
-        if [ -z "$v" ] || [ -z "${has_app[$v]+x}" ]; then
+        if [ -z "$v" ] || [ -z "${has_app[$v]:-}" ]; then
             printf '%s\n' "${out_lines[$i]}"
         fi
     done
 
-    for v in "${!has_app[@]}"; do
+    for v in "${has_app_order[@]}"; do
         printf '%s="%s"\n' "$v" "${final_val[$v]}"
     done
 } >"$tmp_config"
