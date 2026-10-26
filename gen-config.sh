@@ -16,9 +16,6 @@ fi
 mkdir -p .build
 tmp_config="$(realpath ".build/$board")"
 
-# ---------------------------------------------------------------------------
-# Output state
-# ---------------------------------------------------------------------------
 declare -A final_val=() has_app=()
 declare -a has_app_order=() # first-seen order of += vars
 declare -a out_lines=() out_var=()
@@ -69,6 +66,11 @@ process_file() {
         echo "error: include cycle detected at $real" >&2
         exit 1
     fi
+    if [[ "$real" == *.config || "$real" == *.cfg ]]; then
+        echo "error: $real looks like an index, not a fragment" >&2
+        exit 1
+    fi
+
     in_progress[$real]=1
     dir="$(dirname "$real")"
 
@@ -116,17 +118,66 @@ process_file() {
     unset 'in_progress[$real]'
 }
 
+read_index() {
+    local idx="$1" real dir spec line
+    real="$(realpath "$idx" 2>/dev/null || true)"
+    if [ -z "$real" ] || [ ! -f "$real" ]; then
+        echo "error: index file not found: $idx" >&2
+        exit 1
+    fi
+    if [ -n "${in_progress[$real]:-}" ]; then
+        echo "error: include cycle detected at $real" >&2
+        exit 1
+    fi
+    if [[ "$real" == *.fragment ]]; then
+        echo "error: $real looks like a fragment, not a config" >&2
+        exit 1
+    fi
+
+    in_progress[$real]=1
+    dir="$(dirname "$real")"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$'\r'}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [ -z "$line" ] && continue
+        [[ "$line" == \#* ]] && continue
+
+        # @FILE / @glob : include another index file
+        if [[ "$line" == @* ]]; then
+            spec="${line#@}"
+            spec="${spec#"${spec%%[![:space:]]*}"}"
+            spec="${spec%"${spec##*[![:space:]]}"}"
+            local -a m=() g
+            shopt -s nullglob
+            if [[ "$spec" == /* ]]; then
+                for g in $spec; do m+=("$g"); done
+            else
+                for g in "$dir"/$spec; do m+=("$g"); done
+                if [ ${#m[@]} -eq 0 ] && [ "$dir" != "$(realpath configs)" ]; then
+                    for g in configs/$spec; do m+=("$g"); done
+                fi
+            fi
+            shopt -u nullglob
+            if [ ${#m[@]} -eq 0 ]; then
+                echo "error: no index files match '$spec' (from $real)" >&2
+                exit 1
+            fi
+            for g in "${m[@]}"; do read_index "$g"; done
+            continue
+        fi
+
+        expand_and_process "$line" "configs"
+    done <"$real"
+
+    unset 'in_progress[$real]'
+}
+
 # Always load common.fragment first (as the original did).
 process_file "configs/core/common.fragment"
 
-while IFS= read -r line || [ -n "$line" ]; do
-    line="${line%$'\r'}"
-    line="${line#"${line%%[![:space:]]*}"}" # ltrim
-    line="${line%"${line##*[![:space:]]}"}" # rtrim
-    [ -z "$line" ] && continue
-    [[ "$line" == \#* ]] && continue
-    expand_and_process "$line" "configs"
-done <"$config_index"
+read_index "$config_index"
 
 {
     for i in "${!out_lines[@]}"; do
