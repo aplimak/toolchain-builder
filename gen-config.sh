@@ -37,9 +37,9 @@ die() {
     # CALLER: "file:line" for a specific site, "" for top-level
     local caller="$1" msg="$2" i
     if [ -n "$caller" ]; then
-        echo "error: $caller: $msg" >&2
+        printf 'error: %s: %s\n' "$caller" "$msg" >&2
     else
-        echo "error: $msg" >&2
+        printf 'error: %s\n' "$msg" >&2
     fi
     for ((i = ${#include_stack[@]} - 1; i >= 0; i--)); do
         echo "  included from ${include_stack[$i]}" >&2
@@ -48,8 +48,7 @@ die() {
 }
 
 # resolve_glob SPEC BASE OUT_NAMEREF
-# Expands SPEC relative to BASE. If nothing matches and BASE isn't the
-# configs root, retries relative to $configs_root. Returns 0 if >=1 match.
+# Expands SPEC relative to BASE. Returns 0 if >=1 match.
 resolve_glob() {
     local spec="$1" base="$2"
     local -n _rg_out="$3"
@@ -60,9 +59,6 @@ resolve_glob() {
         for g in $spec; do _rg_out+=("$g"); done
     else
         for g in "$base"/$spec; do _rg_out+=("$g"); done
-        if [ ${#_rg_out[@]} -eq 0 ] && [ "$base" != "$configs_root" ]; then
-            for g in "$configs_root"/$spec; do _rg_out+=("$g"); done
-        fi
     fi
     shopt -u nullglob
     [ ${#_rg_out[@]} -gt 0 ]
@@ -87,7 +83,7 @@ process_file() {
     local file="$1" caller="${2:-}"
     local real dir
     real="$(realpath "$file" 2>/dev/null || true)"
-    if [ -z "$real" ]; then
+    if [ -z "$real" ] || [ ! -e "$real" ]; then
         die "$caller" "config file not found: $file"
     elif [ -d "$real" ]; then
         die "$caller" "expected a file, got a directory: $real"
@@ -161,8 +157,8 @@ read_index() {
     local idx="$1" caller="${2:-}"
     local real dir spec line lineno=0
     real="$(realpath "$idx" 2>/dev/null || true)"
-    if [ -z "$real" ]; then
-        die "$caller" "index file not found: $file"
+    if [ -z "$real" ] || [ ! -e "$real" ]; then
+        die "$caller" "index file not found: $idx"
     elif [ -d "$real" ]; then
         die "$caller" "expected a file, got a directory: $real"
     elif [ ! -f "$real" ]; then
@@ -208,7 +204,7 @@ read_index() {
             die "$real:$lineno" "'$line' is a fragment assignment, not a fragment path"
         fi
 
-        expand_and_process "$line" "$configs_root" "$real:$lineno"
+        expand_and_process "$line" "$dir" "$real:$lineno"
     done <"$real"
 
     unset 'in_progress[$real]'
