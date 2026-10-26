@@ -87,8 +87,13 @@ process_file() {
     local file="$1" caller="${2:-}"
     local real dir
     real="$(realpath "$file" 2>/dev/null || true)"
-    { [ -n "$real" ] && [ -f "$real" ]; } ||
+    if [ -z "$real" ]; then
         die "$caller" "config file not found: $file"
+    elif [ -d "$real" ]; then
+        die "$caller" "expected a file, got a directory: $real"
+    elif [ ! -f "$real" ]; then
+        die "$caller" "not a regular file: $real"
+    fi
     [ -z "${in_progress[$real]:-}" ] ||
         die "$caller" "include cycle detected at $real"
     if [[ "$real" == *.config || "$real" == *.cfg ]]; then
@@ -113,7 +118,7 @@ process_file() {
         fi
 
         # VAR+=value : accumulate, never buffered
-        if [[ "$line" =~ ^([A-Za-z0-9_]+)\+=(.*)$ ]]; then
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)\+=(.*)$ ]]; then
             v="${BASH_REMATCH[1]}"
             x="${BASH_REMATCH[2]%\"}"
             x="${x#\"}"
@@ -126,18 +131,26 @@ process_file() {
             continue
         fi
 
-        out_lines+=("$line")
+        # Blank line or comment (#..., including "# BR2_FOO is not set")
+        if [[ "$line" =~ ^[[:space:]]*$ ]] || [[ "$line" == \#* ]]; then
+            out_lines+=("$line")
+            out_var+=("")
+            continue
+        fi
 
-        # VAR=value : buffered, may be suppressed at emit time
-        if [[ "$line" =~ ^([A-Za-z0-9_]+)=(.*)$ ]]; then
+        # VAR=value : buffered verbatim; may be suppressed at emit time
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
             v="${BASH_REMATCH[1]}"
             x="${BASH_REMATCH[2]%\"}"
             x="${x#\"}"
+            out_lines+=("$line")
             out_var+=("$v")
             final_val[$v]="$x"
-        else
-            out_var+=("")
+            continue
         fi
+
+        # Anything else is malformed.
+        die "$real:$lineno" "invalid fragment line: '$line' (expected VAR=value, VAR+=value, @include, blank, or #comment)"
     done <"$real"
 
     unset 'in_progress[$real]'
@@ -148,8 +161,13 @@ read_index() {
     local idx="$1" caller="${2:-}"
     local real dir spec line lineno=0
     real="$(realpath "$idx" 2>/dev/null || true)"
-    { [ -n "$real" ] && [ -f "$real" ]; } ||
-        die "$caller" "index file not found: $idx"
+    if [ -z "$real" ]; then
+        die "$caller" "index file not found: $file"
+    elif [ -d "$real" ]; then
+        die "$caller" "expected a file, got a directory: $real"
+    elif [ ! -f "$real" ]; then
+        die "$caller" "not a regular file: $real"
+    fi
     [ -z "${in_progress[$real]:-}" ] ||
         die "$caller" "include cycle detected at $real"
     if [[ "$real" == *.fragment ]]; then
@@ -183,6 +201,11 @@ read_index() {
                 unset 'include_stack[-1]'
             done
             continue
+        fi
+
+        # Guard against the mix-up: VAR=value in an index file.
+        if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*\+?= ]]; then
+            die "$real:$lineno" "'$line' is a fragment assignment, not a fragment path"
         fi
 
         expand_and_process "$line" "$configs_root" "$real:$lineno"
